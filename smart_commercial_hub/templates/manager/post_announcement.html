@@ -1,0 +1,20 @@
+{% extends "manager/base.html" %}
+{% block content %}
+
+<div class="container">
+    <h2 class="text-center my-4">Post New Announcement</h2>
+    <div class="card shadow-lg p-4">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Post Announcement</button>
+        </form>
+
+    </div>
+    <br>
+    <div class="card-footer text-center">
+        <a href="{% url 'manage_announcements' %}" class="btn btn-outline-danger">View Announcement</a>
+    </div>
+</div>
+
+{% endblock %}

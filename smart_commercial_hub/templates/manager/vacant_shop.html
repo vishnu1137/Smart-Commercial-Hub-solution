@@ -1,0 +1,32 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2 class="text-center my-4">Vacant Shops</h2>
+    <div class="row">
+        {% for shop in shops %}
+        <div class="col-md-4">
+            <div class="card shadow-lg mb-4">
+                {% if shop.image %}
+                <img src="{{ shop.image.url }}" class="card-img-top" alt="{{ shop.name }}">
+                {% else %}
+                <img src="https://via.placeholder.com/300x200?text=No+Image" class="card-img-top" alt="No Image">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title text-success">{{ shop.name }}</h5>
+                    <p><strong>Shop No:</strong> {{ shop.shop_no }}</p>
+                    <p><strong>Location:</strong> {{ shop.location }}</p>
+                    <span class="badge bg-success">Vacant</span>
+                    <div class="mt-3">
+                        <a href="{% url 'allocate_shop' shop.id %}" class="btn btn-sm btn-primary">Allocate</a>
+                        <a href="{% url 'shop_details' shop.id %}" class="btn btn-sm btn-info">View Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-center text-muted">No vacant shops available.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

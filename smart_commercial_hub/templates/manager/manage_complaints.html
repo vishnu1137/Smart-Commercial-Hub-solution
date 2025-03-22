@@ -1,0 +1,45 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2 class="text-center my-4">Manage Complaints</h2>
+
+    <table class="table table-bordered table-striped shadow">
+        <thead class="table-dark">
+            <tr>
+                <th>NO</th>
+                <th>Tenant</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th>Date Submitted</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for complaint in complaints %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ complaint.shop.tenant_id.tenant }}</td>
+                <td>{{ complaint.category }}</td>
+                <td>
+                    <span class="badge {% if complaint.status == 'pending' %} bg-danger
+                                       {% elif complaint.status == 'in_progress' %} bg-warning
+                                       {% else %} bg-success{% endif %}">
+                        {{ complaint.get_status_display }}
+                    </span>
+                </td>
+                
+                <td>{{ complaint.created_at|date:"d M Y, H:i A" }}</td>
+                <td>
+                    <a href="{% url 'update_complaint' complaint.id %}" class="btn btn-sm btn-primary">Update</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted">No complaints available.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "tenant/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4 text-center text-primary">My Shop</h2>
+
+    {% if allocated_shops %}
+        <div class="row">
+            {% for shop in allocated_shops %}
+                <div class="col-md-6">
+                    <div class="card mb-4 shadow-lg border-0 rounded-lg">
+                        {% if shop.shop_id.image %}
+                            <img src="{{ shop.shop_id.image.url }}" class="card-img-top img-fluid" alt="Shop Image" style="height: 250px; object-fit: cover;">
+                        {% else %}
+                            <img src="https://via.placeholder.com/400x250?text=No+Image" class="card-img-top img-fluid" alt="No Image">
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title text-success">{{ shop.shop_id.name }}</h5>
+                            <p class="card-text"><strong>Shop No:</strong> {{ shop.shop_id.shop_no }}</p>
+                            <p class="card-text"><strong>Location:</strong> {{ shop.shop_id.location }}</p>
+                            <p class="card-text"><strong>Size:</strong> {{ shop.shop_id.size }} sqft</p>
+                            <p class="card-text"><strong>Type:</strong> {{ shop.shop_id.get_shop_type_display }}</p>
+                            <p class="card-text"><strong>Lease:</strong> {{ shop.lease_start }} - {{ shop.lease_end }}</p>
+                            <p class="card-text"><strong>Rent:</strong> ₹{{ shop.rent_amount }}</p>
+                            
+                            <p class="card-text">
+                                <strong>Payment Status:</strong>
+                                <span class="badge {% if shop.payment_status == 'paid' %} bg-success {% else %} bg-danger {% endif %}">
+                                    {{ shop.get_payment_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="card-footer text-center bg-light">
+                            
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-warning text-center">
+            <h4>No shop allocated yet.</h4>
+            <p>Please contact the admin for shop allocation.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .card {
+        transition: transform 0.3s ease-in-out;
+    }
+    .card:hover {
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}

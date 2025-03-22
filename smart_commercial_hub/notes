@@ -1,0 +1,86 @@
+{% extends 'base.html' %}  {# Extends the base layout if available #}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">Tenant Dashboard</h2>
+
+    {% if tenant %}
+        <div class="card p-3 shadow-sm">
+            <h4>Welcome, {{ tenant.tenant.username }}</h4>
+            <p><strong>Phone:</strong> {{ tenant.phone }}</p>
+            <p><strong>Address:</strong> {{ tenant.address }}</p>
+
+            {# ID Proof Download Link #}
+            <p><strong>ID Proof:</strong>
+                {% if tenant.id_proof %}
+                    <a href="{{ tenant.id_proof.url }}" target="_blank" class="btn btn-primary btn-sm">View ID Proof</a>
+                {% else %}
+                    Not Uploaded
+                {% endif %}
+            </p>
+
+            {# Profile Image #}
+            <p><strong>Profile Image:</strong><br>
+                {% if tenant.image %}
+                    <img src="{{ tenant.image.url }}" alt="Tenant Image" class="img-fluid rounded" width="150">
+                {% else %}
+                    <span>No Image Available</span>
+                {% endif %}
+            </p>
+        </div>
+        
+        <hr>
+
+        {# Allocated Shop Details #}
+        {% if allocated_shop %}
+            <h3>Shop Details</h3>
+            <div class="card p-3 shadow-sm">
+                <p><strong>Shop Name:</strong> {{ allocated_shop.shop_id.name }}</p>
+                <p><strong>Shop Number:</strong> {{ allocated_shop.shop_id.shop_no }}</p>
+                <p><strong>Shop Type:</strong> {{ allocated_shop.shop_id.get_shop_type_display }}</p>
+                <p><strong>Rent Amount:</strong> ₹{{ allocated_shop.rent_amount }}</p>
+                <p><strong>Lease Start:</strong> {{ allocated_shop.lease_start }}</p>
+                <p><strong>Lease End:</strong> {{ allocated_shop.lease_end }}</p>
+
+                {# Shop Image #}
+                {% if allocated_shop.shop_id.image %}
+                    <img src="{{ allocated_shop.shop_id.image.url }}" alt="Shop Image" class="img-fluid rounded" width="200">
+                {% else %}
+                    <p>No Shop Image Available</p>
+                {% endif %}
+            </div>
+        {% else %}
+            <p>No allocated shop found.</p>
+        {% endif %}
+
+        <hr>
+
+        {# Announcements Section #}
+        <h3>Announcements</h3>
+        {% if announcements %}
+            <ul class="list-group">
+                {% for announcement in announcements %}
+                    <li class="list-group-item">
+                        <h5>{{ announcement.title }}</h5>
+                        <p>{{ announcement.message }}</p>
+                        <small><strong>Published By:</strong> {{ announcement.published_by.username }}</small><br>
+                        <small><strong>Published On:</strong> {{ announcement.published_at|date:"d M Y" }}</small>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No announcements available.</p>
+        {% endif %}
+
+        <hr>
+
+        {# Action Buttons #}
+        <a href="{% url 'update_tenant' %}" class="btn btn-warning">Edit Profile</a>
+        <a href="{% url 'submit_complaint' %}" class="btn btn-danger">Submit Complaint</a>
+        <a href="{% url 'view_complaints' %}" class="btn btn-info">View Complaints</a>
+        
+    {% else %}
+        <p class="text-danger">No tenant data found.</p>
+    {% endif %}
+</div>
+{% endblock %}

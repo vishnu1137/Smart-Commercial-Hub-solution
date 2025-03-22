@@ -1,0 +1,45 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                {% if shop.image %}
+                    <img src="{{ shop.image.url }}" class="card-img-top" alt="Shop Image" style="height: 300px; object-fit: cover;">
+                {% else %}
+                    <img src="https://via.placeholder.com/800x300" class="card-img-top" alt="No Image">
+                {% endif %}
+
+                <div class="card-body">
+                    <h2 class="card-title text-primary">{{ shop.name }}</h2>
+                    <h5 class="text-muted">{{ shop.shop_no }}</h5>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <p><strong>Size:</strong> {{ shop.size }} sqft</p>
+                            <p><strong>Location:</strong> {{ shop.location }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Type:</strong> {{ shop.get_shop_type_display }}</p>
+                            <p>
+                                <strong>Status:</strong> 
+                                <span class="badge {% if shop.status == 'occupied' %}bg-danger{% else %}bg-success{% endif %}">
+                                    {{ shop.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        
+                        {% if shop.status == 'vacant' %}
+                            <a href="{% url 'allocate_shop' shop.id %}" class="btn btn-success">Allocate Shop</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

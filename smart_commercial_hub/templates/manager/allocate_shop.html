@@ -1,0 +1,27 @@
+{% extends "manager/base.html" %}
+{% block content %}
+
+<div class="container">
+    <h2 class="text-center my-4">Allocate Shop</h2>
+
+    <div class="card shadow-lg p-4">
+        <h5 class="text-primary">Shop Details</h5>
+        <p><strong>Shop No:</strong> {{ shop.shop_no }}</p>
+        <p><strong>Name:</strong> {{ shop.name }}</p>
+        <p><strong>Location:</strong> {{ shop.location }}</p>
+        <p><strong>Size:</strong> {{ shop.size }} sq ft</p>
+
+        <hr>
+        <h5 class="text-primary">Allocate to Tenant</h5>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+
+            <button type="submit" class="btn btn-success">Allocate Shop</button>
+            
+        </form>
+    </div>
+</div>
+
+{% endblock %}

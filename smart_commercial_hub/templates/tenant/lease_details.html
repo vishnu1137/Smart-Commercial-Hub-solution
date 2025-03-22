@@ -1,0 +1,44 @@
+{% extends 'tenant/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Lease Details</h2>
+
+    {% if leases %}
+        <div class="row">
+            {% for lease in leases %}
+                <div class="col-md-6">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ lease.shop_id.name }} ({{ lease.shop_id.shop_no }})</h5>
+                            <p class="card-text"><strong>Lease Period:</strong> {{ lease.lease_start }} to {{ lease.lease_end }}</p>
+                            <p class="card-text"><strong>Rent Amount:</strong> ₹{{ lease.rent_amount }}</p>
+                            <p class="card-text"><strong>Security Deposit:</strong> ₹{{ lease.security_deposit }}</p>
+                            <p class="card-text">
+                                <strong>Payment Status:</strong>
+                                <span class="badge {% if lease.payment_status == 'pending' %}bg-danger{% else %}bg-success{% endif %}">
+                                    {{ lease.payment_status }}
+                                </span>
+                            </p>
+                            <p class="card-text">
+                                <strong>Status:</strong> 
+                                <span class="badge {% if lease.status == 'active' %} bg-primary {% else %} bg-secondary {% endif %}">
+                                    {{ lease.get_status_display }}
+                                </span>
+                            </p>
+
+                            {% if lease.agreement_document %}
+                                <a href="{{ lease.agreement_document.url }}" class="btn btn-info" target="_blank">View Agreement</a>
+                            {% else %}
+                                <p class="text-muted">No agreement document uploaded.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-warning">No lease details available.</div>
+    {% endif %}
+</div>
+{% endblock %}

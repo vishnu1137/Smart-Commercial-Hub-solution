@@ -1,0 +1,27 @@
+{% extends "tenant/base.html" %}
+
+{% block content %}
+<h2>All Complaints</h2>
+<table border="1">
+    <tr>
+        <th>Tenant</th>
+        <th>Subject</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+    {% for complaint in complaints %}
+    <tr>
+        <td>{{ complaint.shop.tenant_id.tenant.username }}</td>
+        <td>{{ complaint.category }}</td>
+        <td>{{ complaint.get_status_display }}</td>
+        <td>
+            <a href="{% url 'update_complaint_status' complaint.id %}">Update Status</a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="4">No complaints found.</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "manager/base.html" %}
+{% block content %}
+
+<div class="container">
+    <h2 class="text-center my-4">Tenant Details</h2>
+
+    <div class="row">
+        <!-- Tenant Profile -->
+        <div class="col-md-5">
+            <div class="card shadow-lg">
+                <div class="card-body text-center">
+                    {% if tenant.image %}
+                    <img src="{{ tenant.image.url }}" class="rounded-circle mb-3" width="150" height="150" alt="{{ tenant.tenant.username }}">
+                    {% else %}
+                    <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="No Image">
+                    {% endif %}
+                    
+                    <h4 class="card-title text-primary">{{ tenant.tenant.username }}</h4>
+                    <p class="card-text"><strong>Email:</strong> {{ tenant.tenant.email }}</p>
+                    <p class="card-text"><strong>Phone:</strong> {{ tenant.phone }}</p>
+                    <p class="card-text"><strong>Address:</strong> {{ tenant.address }}</p>
+                    
+                    {% if tenant.id_proof %}
+                    <p><a href="{{ tenant.id_proof.url }}" class="btn btn-sm btn-info" target="_blank">View ID Proof</a></p>
+                    {% else %}
+                    <p class="text-muted">No ID Proof uploaded</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Shop Allocation Details -->
+        <div class="col-md-7">
+            <div class="card shadow-lg">
+                <div class="card-body">
+                    <h4 class="card-title text-success">Allocated Shops</h4>
+        
+                    {% if allocated_shops %}
+                        {% for shop in allocated_shops %}
+                            <div class="border rounded p-3 mb-3">
+                                <p><strong>Shop Name:</strong> {{ shop.shop_id.name }}</p>
+                                <p><strong>Shop No:</strong> {{ shop.shop_id.shop_no }}</p>
+                                <p><strong>Location:</strong> {{ shop.shop_id.location }}</p>
+                                <p><strong>Shop Type:</strong> {{ shop.shop_id.get_shop_type_display }}</p>
+                                <p><strong>Lease Start:</strong> {{ shop.lease_start }}</p>
+                                <p><strong>Lease End:</strong> {{ shop.lease_end }}</p>
+                                <p><strong>Rent Amount:</strong> ₹{{ shop.rent_amount }}</p>
+                                <p><strong>Security Deposit:</strong> ₹{{ shop.security_deposit }}</p>
+                                <p><strong>Status:</strong> 
+                                    <span class="badge {% if shop.status == 'occupied' %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ shop.get_status_display }}
+                                    </span>
+                                </p>
+        
+                                {% if shop.agreement_document %}
+                                    <p><a href="{{ shop.agreement_document.url }}" class="btn btn-sm btn-secondary" target="_blank">View Agreement</a></p>
+                                {% else %}
+                                    <p class="text-muted">No agreement uploaded</p>
+                                {% endif %}
+        
+                                <div class="mt-3">
+                                    <a href="{% url 'shop_details' shop.shop_id.id %}" class="btn btn-primary btn-sm">View Shop</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-danger">No shop allocated to this tenant.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+{% endblock %}

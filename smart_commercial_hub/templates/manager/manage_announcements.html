@@ -1,0 +1,21 @@
+{% extends "manager/base.html" %}
+{% block content %}
+
+<div class="container">
+    <h2 class="text-center my-4">Manage Announcements</h2>
+    
+    {% for announcement in announcements %}
+    <div class="card shadow-lg mb-3">
+        <div class="card-body">
+            <h5 class="card-title text-primary">{{ announcement.title }}</h5>
+            <p class="card-text">{{ announcement.message }}</p>
+            <p class="text-muted"><small>Posted by: {{ announcement.posted_by.username }} | {{ announcement.created_at }}</small></p>
+            <a href="{% url 'delete_announcement' announcement.id %}" class="btn btn-danger btn-sm">Delete</a>
+        </div>
+    </div>
+    {% empty %}
+    <p class="text-center text-muted">No announcements found.</p>
+    {% endfor %}
+</div>
+
+{% endblock %}

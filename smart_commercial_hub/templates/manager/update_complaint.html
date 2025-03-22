@@ -1,0 +1,20 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2 class="text-center my-4">Update Complaint</h2>
+    <div class="card shadow-lg p-4">
+        <h4 class="text-danger">{{ complaint.subject }}</h4>
+        <p><strong>Tenant:</strong> {{ complaint.tenant.get_full_name }}</p>
+        <p><strong>Message:</strong> {{ complaint.message }}</p>
+        <p><strong>Date Submitted:</strong> {{ complaint.created_at|date:"d M Y, H:i A" }}</p>
+
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-success">Update Complaint</button>
+            <a href="{% url 'manage_complaints' %}" class="btn btn-secondary">Back</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

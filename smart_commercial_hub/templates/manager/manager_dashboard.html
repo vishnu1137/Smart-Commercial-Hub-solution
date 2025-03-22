@@ -1,0 +1,56 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+<h2 class="mb-4">Welcome, Manager</h2>
+
+<div class="row">
+    <!-- Total Shops -->
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Shops</h5>
+                <p class="card-text fs-4">{{ total_shops }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Tenants -->
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Tenants</h5>
+                <p class="card-text fs-4">{{ total_tenants }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Complaints -->
+    <div class="col-md-4">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Pending Complaints</h5>
+                <p class="card-text fs-4">{{ pending_complaints }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Announcements -->
+<h3 class="mt-4">Latest Announcements</h3>
+<div class="card">
+    <div class="card-body">
+        {% if announcements %}
+            <ul class="list-group">
+                {% for announcement in announcements %}
+                    <li class="list-group-item">
+                        <strong>{{ announcement.title }}</strong> - {{ announcement.date }}
+                        <p>{{ announcement.message }}</p>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">No announcements available.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

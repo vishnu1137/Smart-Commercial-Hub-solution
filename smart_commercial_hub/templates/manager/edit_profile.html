@@ -1,0 +1,37 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg rounded">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4>Edit Profile ({{ user.username }})</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <h5 class="text-secondary">Manager Details</h5>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Email</strong></label>
+                            {{ email_form.email }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Phone</strong></label>
+                            {{ manager_form.phone }}
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">Update Profile</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'profile' %}" class="btn btn-outline-primary">Back to Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

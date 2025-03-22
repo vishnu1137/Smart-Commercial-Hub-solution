@@ -1,0 +1,54 @@
+{% extends "manager/base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <h2 class="text-center text-primary">Lease Details</h2>
+
+    {% if lease %}
+    <div class="card shadow-lg mt-4">
+        <div class="card-body">
+            <h4 class="card-title text-info">Shop: {{ lease.shop_id.name }}</h4>
+            <p class="card-text"><strong>Shop No:</strong> {{ lease.shop_id.shop_no }}</p>
+            <p class="card-text"><strong>Location:</strong> {{ lease.shop_id.location }}</p>
+            <p class="card-text"><strong>Shop Type:</strong> {{ lease.shop_id.get_shop_type_display }}</p>
+            <p class="card-text"><strong>Tenant:</strong> {{ lease.tenant_id.tenant.get_full_name }}</p>
+            
+            <hr>
+
+            <h5 class="text-success">Lease Information</h5>
+            <p class="card-text"><strong>Lease Start:</strong> {{ lease.lease_start }}</p>
+            <p class="card-text"><strong>Lease End:</strong> {{ lease.lease_end }}</p>
+            <p class="card-text"><strong>Rent Amount:</strong> ₹{{ lease.rent_amount }}</p>
+            <p class="card-text"><strong>Security Deposit:</strong> ₹{{ lease.security_deposit }}</p>
+
+            <p class="card-text">
+                <strong>Status:</strong> 
+                <span class="badge {% if lease.status == 'active' %}bg-success{% else %}bg-danger{% endif %}">
+                    {{ lease.get_status_display }}
+                </span>
+            </p>
+
+            <p class="card-text">
+                <strong>Payment Status:</strong> 
+                <span class="badge {% if lease.payment_status == 'pending' %}bg-danger{% else %}bg-success{% endif %}">
+                    {{ lease.get_payment_status_display }}
+                </span>
+            </p>
+
+            {% if lease.agreement_document %}
+            <p><strong>Lease Agreement:</strong> <a href="{{ lease.agreement_document.url }}" class="btn btn-primary btn-sm" target="_blank">View Document</a></p>
+            {% endif %}
+            
+            <div class="mt-3">
+                <a href="{% url 'manage_shops' %}" class="btn btn-secondary">Back to Shops</a>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="alert alert-warning text-center mt-4">No lease details available.</div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

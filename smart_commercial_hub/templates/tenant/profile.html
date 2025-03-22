@@ -1,0 +1,58 @@
+{% extends "tenant/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <!-- Sidebar Profile Card -->
+        <div class="col-md-4">
+            <div class="card shadow-lg rounded text-center">
+                <div class="card-body">
+                    {% if user.tenant.image %}
+                        <img src="{{ user.tenant.image.url }}" class="rounded-circle mb-3" width="150" height="150" alt="{{ user.username }}">
+                    {% elif user.manager.image %}
+                        <img src="{{ user.manager.image.url }}" class="rounded-circle mb-3" width="150" height="150" alt="{{ user.username }}">
+                    {% else %}
+                        <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="Profile Image">
+                    {% endif %}
+
+                    <h4 class="text-primary">{{ user.username }}</h4>
+                    <p class="text-muted">{{ user.email }}</p>
+
+                    <a href="{% url 'edit_profile' %}" class="btn btn-outline-primary btn-sm mt-2">Edit Profile</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Details -->
+        <div class="col-md-8">
+            <div class="card shadow-lg rounded">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Profile Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Username:</strong> {{ user.username }}</p>
+                    <p><strong>Email:</strong> {{ user.email }}</p>
+
+                    {% if user.tenant %}
+                        <p><strong>Phone:</strong> {{ user.tenant.phone }}</p>
+                        <p><strong>Address:</strong> {{ user.tenant.address }}</p>
+                        <h5 class="text-success mt-4">Allocated Shops</h5>
+                        {% for shop in allocated_shops %}
+                            <div class="border p-2 mb-2 rounded">
+                                <p><strong>Shop Name:</strong> {{ shop.shop_id.name }}</p>
+                                <p><strong>Shop No:</strong> {{ shop.shop_id.shop_no }}</p>
+                                <p><strong>Lease:</strong> {{ shop.lease_start }} to {{ shop.lease_end }}</p>
+                                <p><strong>Rent:</strong> ₹{{ shop.rent_amount }}</p>
+                            </div>
+                        {% empty %}
+                            <p class="text-danger">No shop allocated.</p>
+                        {% endfor %}
+                    {% elif user.manager %}
+                        <p><strong>Role:</strong> Manager</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
