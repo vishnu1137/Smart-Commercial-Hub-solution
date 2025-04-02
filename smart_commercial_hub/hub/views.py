@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth import authenticate, login, logout
+from django.core.mail import send_mail
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist  
 from django.contrib.auth.decorators import login_required,user_passes_test
@@ -94,7 +96,6 @@ def profile_view(request):
         "allocated_shops": allocated_shops if tenant else None,
         "manager": manager
     })
-
 
 @login_required
 def edit_profile(request):
@@ -345,11 +346,30 @@ def allocate_shop(request, shop_id):
             allocation.save()
 
             # Update shop status to 'Occupied'
-            shop.status = 'occupied'
+            shop.status = "occupied"
             shop.save()
 
-            messages.success(request, "Shop allocated successfully.")
-            return redirect("manage_shops")
+            # Get the tenant's email
+            tenant_email = allocation.tenant_id.tenant.email
+            subject = "Shop Allocation Confirmation"
+            message = (
+                f"Dear {allocation.tenant_id.tenant.username},\n\n"
+                f"You have been successfully allocated Shop {shop.shop_no} ({shop.name}).\n"
+                f"Location: {shop.location}\n"
+                f"Lease Start: {allocation.lease_start}\n"
+                f"Lease End: {allocation.lease_end}\n"
+                f"Rent Amount: ₹{allocation.rent_amount}\n"
+                f"Security Deposit: ₹{allocation.security_deposit}\n\n"
+                "Please contact the management for further details.\n\n"
+                "Best Regards,\nSmart Commercial Hub Management"
+            )
+
+            # Send email to the tenant
+            send_mail(subject, message, settings.EMAIL_HOST_USER, [tenant_email], fail_silently=False)
+
+            messages.success(request, "Shop allocated successfully and email sent to the tenant.")
+            return redirect("vacant_shops")
+
     else:
         form = AllocateShopForm()
 
@@ -403,15 +423,34 @@ def manage_complaints(request):
 # Update complaint status
 def update_complaint(request, complaint_id):
     complaint = get_object_or_404(Complaint, id=complaint_id)
-    
+    tenant_email = complaint.shop.tenant_id.tenant.email  # ✅ Get tenant's email
+
     if request.method == "POST":
         form = ComplaintUpdateForm(request.POST, instance=complaint)
         if form.is_valid():
             complaint = form.save(commit=False)
-            if complaint.status == "resolved":
+            
+            if complaint.status == "resolved":  # ✅ If the complaint is resolved
                 complaint.resolved_at = now()
-            complaint.save()
-            messages.success(request, "Complaint updated successfully.")
+                complaint.save()
+
+                # ✅ Send email to the tenant
+                send_mail(
+                    "Your Complaint Has Been Resolved",
+                    f"Dear {complaint.shop.tenant_id.tenant.username},\n\n"
+                    f"Your complaint (ID: {complaint.id}) has been resolved by the manager.\n"
+                    f"If you have any further issues, feel free to reach out.\n\n"
+                    f"Best regards,\nCommercial Hub Team",
+                    settings.EMAIL_HOST_USER,
+                    [tenant_email],  
+                    fail_silently=False,
+                )
+                
+                messages.success(request, "Complaint resolved and email sent to the tenant.")
+            else:
+                complaint.save()
+                messages.success(request, "Complaint updated successfully.")
+
             return redirect("manage_complaints")
     else:
         form = ComplaintUpdateForm(instance=complaint)
