@@ -59,6 +59,14 @@
         .btn {
             border-radius: 20px;
         }
+
+        .shop-image {
+            width: 360px;   /* Set a fixed width */
+            height: 250px;  /* Set a fixed height */
+            object-fit: cover;  /* Ensures the image fills the space while maintaining aspect ratio */
+            border-radius: 10px; /* Optional: Makes corners rounded */
+        }
+
     </style>
 </head>
 <body>
@@ -71,7 +79,7 @@
         <div class="ms-auto">
             <div class="dropdown">
                 <button class="btn btn-outline-primary dropdown-toggle" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-user-circle"></i> {{ request.user.username }}
+                    <i class="fas fa-user-circle"></i> {{ request.user.username|upper }}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
                     <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fas fa-user"></i> My Profile</a></li>

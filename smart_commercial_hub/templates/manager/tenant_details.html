@@ -15,7 +15,7 @@
                     <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="No Image">
                     {% endif %}
                     
-                    <h4 class="card-title text-primary">{{ tenant.tenant.username }}</h4>
+                    <h4 class="card-title text-primary">{{ tenant.tenant.username|upper }}</h4>
                     <p class="card-text"><strong>Email:</strong> {{ tenant.tenant.email }}</p>
                     <p class="card-text"><strong>Phone:</strong> {{ tenant.phone }}</p>
                     <p class="card-text"><strong>Address:</strong> {{ tenant.address }}</p>

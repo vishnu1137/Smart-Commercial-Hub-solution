@@ -3,6 +3,13 @@ from django.contrib.auth import views as auth_views
 from hub.views import *
 
 urlpatterns = [
+    #path('payment/initiate/', initiate_payment, name='initiate_payment'),
+    #path('payment/callback/', payment_callback, name='payment_callback'),
+    path('payment/initiate/', initiate_payment, name='initiate_payment'),
+    path('payment/create/<int:allocated_shop_id>/', create_payment, name='create_payment'),
+    path('payment/callback/<int:transaction_id>/', payment_callback, name='payment_callback'),
+    path('payment/history/', payment_history, name='payment_history'),
+
 
     path("password-reset/", auth_views.PasswordResetView.as_view(template_name="auth/password_reset.html"), name="password_reset"),
     path("password-reset/done/", auth_views.PasswordResetDoneView.as_view(template_name="auth/password_reset_done.html"), name="password_reset_done"),
@@ -42,6 +49,11 @@ urlpatterns = [
     path('announcement-side/', submit_complaint, name='submit_complaint'),
     path("manage-complaints/", manage_complaints, name="manage_complaints"),
     path("update-complaint/<int:complaint_id>/", update_complaint, name="update_complaint"),
+    #payment
+    path('my-rents/', rent_list, name='rent-list'),
 
+    path('shop_rent/', shop_rent, name='shop_rent'),
+
+    
     
 ]

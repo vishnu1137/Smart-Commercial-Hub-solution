@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0"><i class="fas fa-times-circle mr-2"></i> Payment Failed</h3>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div class="mb-4">
+                            <i class="fas fa-times-circle text-danger" style="font-size: 5rem;"></i>
+                        </div>
+                        <h4>We couldn't process your payment</h4>
+                        <p class="text-muted">There was a problem with your payment. Please try again.</p>
+                        <div class="alert alert-danger">
+                            <strong>Error:</strong> {{ error }}
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Transaction Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Transaction ID:</strong><br> {{ transaction.transaction_id }}</p>
+                                    <p><strong>Status:</strong> <span class="badge badge-danger">{{ transaction.payment_status }}</span></p>
+                                    <p><strong>Attempts:</strong> {{ transaction.attempts }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Shop:</strong><br> {{ transaction.shop.shop_id.name }} ({{ transaction.shop.shop_id.shop_no }})</p>
+                                    <p><strong>Amount:</strong> {{ transaction.currency }} {{ transaction.amount }}</p>
+                                    <p><strong>Date:</strong> {{ transaction.created_at|date:"d M Y H:i" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <a href="{% url 'create_payment' transaction.shop.id %}" class="btn btn-primary mr-2">Try Again</a>
+                        <a href="{% url 'initiate_payment' %}" class="btn btn-outline-secondary">Back to Shop Selection</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

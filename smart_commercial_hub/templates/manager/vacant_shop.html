@@ -2,15 +2,24 @@
 
 {% block content %}
 <div class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <h2 class="text-center my-4">Vacant Shops</h2>
     <div class="row">
         {% for shop in shops %}
         <div class="col-md-4">
             <div class="card shadow-lg mb-4">
                 {% if shop.image %}
-                <img src="{{ shop.image.url }}" class="card-img-top" alt="{{ shop.name }}">
+                <center><img src="{{ shop.image.url }}" class="shop-image" alt="Shop Image"></center>
                 {% else %}
-                <img src="https://via.placeholder.com/300x200?text=No+Image" class="card-img-top" alt="No Image">
+                <center><img src="https://via.placeholder.com/300x200?text=No+Image" onerror="this.onerror=null; this.src='/media/shop_images/empty-mall.jpg';" class="shop-image" alt="No Image"></center>
                 {% endif %}
                 <div class="card-body">
                     <h5 class="card-title text-success">{{ shop.name }}</h5>

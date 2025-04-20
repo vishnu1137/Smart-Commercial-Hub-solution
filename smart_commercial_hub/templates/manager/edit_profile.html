@@ -6,7 +6,7 @@
         <div class="col-md-6">
             <div class="card shadow-lg rounded">
                 <div class="card-header bg-primary text-white text-center">
-                    <h4>Edit Profile ({{ user.username }})</h4>
+                    <h4>Edit Profile ({{ user.username|upper }})</h4>
                 </div>
                 <div class="card-body">
                     <form method="post">
@@ -27,6 +27,8 @@
                         </div>
                     </form>
                 </div>
+                
+
                 <div class="card-footer text-center">
                     <a href="{% url 'profile' %}" class="btn btn-outline-primary">Back to Profile</a>
                 </div>

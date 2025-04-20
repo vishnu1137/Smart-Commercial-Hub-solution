@@ -36,7 +36,7 @@
         <div class="ms-auto">
             <div class="dropdown">
                 <button class="btn btn-outline-primary dropdown-toggle" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-user-circle"></i> {{ request.user.username }}
+                    <i class="fas fa-user-circle"></i> {{ request.user.username|upper }}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
                     <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fas fa-user"></i> My Profile</a></li>
@@ -55,7 +55,7 @@
                         <li class="nav-item"><a class="nav-link text-white" href="#"><i class="fas fa-home"></i> Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link text-white" href="{% url 'my_shop' %}"><i class="fas fa-store"></i> My Shop</a></li>
                         <li class="nav-item"><a class="nav-link text-white" href="{% url 'lease_details' %}"><i class="fas fa-file-invoice"></i> Lease Details</a></li>
-                        <li class="nav-item"><a class="nav-link text-white" href="#"><i class="fas fa-money-bill"></i> Rent Payments</a></li>
+                        <li class="nav-item"><a class="nav-link text-white" href="{% url 'initiate_payment' %}"><i class="fas fa-money-bill"></i> Rent Payments</a></li>
                         <li class="nav-item"><a class="nav-link text-white" href="{% url 'announcements' %}"><i class="fas fa-bell"></i> Announcements</a></li>
                         <li class="nav-item"><a class="nav-link text-white" href="{% url 'submit_complaint' %}"><i class="fas fa-file-alt"></i> Complaint</a></li>
                     </ul>
@@ -65,7 +65,7 @@
             <!-- Main Content -->
             <main class="col-md-10 ms-sm-auto px-md-4"><br>
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Welcome, {{ request.user.username }}</h1>
+                    <h1 class="h2">Welcome, {{ request.user.username|upper }}</h1>
                 </div>
                 
                 <div class="row">

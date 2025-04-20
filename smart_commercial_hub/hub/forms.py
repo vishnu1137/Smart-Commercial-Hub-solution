@@ -12,7 +12,7 @@ class ShopnameUpdateForm(forms.ModelForm):
    class Meta:
     
        model = Shop
-       fields = ['name','shop_type']
+       fields = ['name']
 
 class EmailUpdateForm(forms.ModelForm):
    class Meta:

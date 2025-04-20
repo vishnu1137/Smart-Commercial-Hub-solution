@@ -8,6 +8,171 @@ from django.contrib.auth.decorators import login_required,user_passes_test
 from django.urls import reverse
 from hub.models import *
 from hub.forms import *
+from cashfree_pg.models.create_order_request import CreateOrderRequest
+from cashfree_pg.api_client import Cashfree
+from cashfree_pg.models.customer_details import CustomerDetails
+from cashfree_pg.models.order_meta import OrderMeta
+
+
+
+import json
+import razorpay
+import uuid
+from django.conf import settings
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from .models import AllocatedShop, RentPaymentTransaction
+
+# Initialize Razorpay client
+client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
+def initiate_payment(request):
+    """View to show list of shops for payment and initiate payment flow"""
+    
+    if not request.user.is_authenticated:
+        return redirect('login')
+        
+    try:
+        # Get tenant's allocated shops that need payment
+        tenant = request.user.tenant
+        allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant, payment_status='pending')
+        
+        return render(request, 'select_shop_for_payment.html', {'allocated_shops': allocated_shops})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@login_required
+def create_payment(request, allocated_shop_id):
+    """View to create a Razorpay Order for rent payment"""
+    
+    # Get the allocated shop
+    allocated_shop = get_object_or_404(AllocatedShop, id=allocated_shop_id)
+    
+    # Check if the logged-in user is the tenant of this shop
+    if request.user != allocated_shop.tenant_id.tenant:
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    try:
+        # Get amount from allocated shop's rent_amount
+        amount = int(float(allocated_shop.rent_amount) * 100)  # Convert to paise
+        currency = 'INR'
+        
+        # Generate a unique receipt ID
+        receipt_id = f"rent_{allocated_shop_id}_{uuid.uuid4().hex[:8]}"
+        
+        # Create Razorpay Order
+        payment_data = {
+            'amount': amount,
+            'currency': currency,
+            'receipt': receipt_id,
+            'payment_capture': '1'  # Auto capture
+        }
+        
+        order = client.order.create(data=payment_data)
+        
+        # Create a record in RentPaymentTransaction
+        transaction = RentPaymentTransaction.objects.create(
+            tenant=allocated_shop,  # Using tenant field
+            shop=allocated_shop,    # Using shop field
+            transaction_id=order['id'],
+            amount=float(allocated_shop.rent_amount),
+            currency=currency,
+            payment_status='Created',
+            order_receipt_id=receipt_id
+        )
+        
+        # Prepare payment context for template
+        context = {
+            'razorpay_order_id': order['id'],
+            'razorpay_merchant_key': settings.RAZORPAY_KEY_ID,
+            'razorpay_amount': amount,
+            'currency': currency,
+            'callback_url': f'/payment/callback/{transaction.id}/',
+            'customer_name': request.user.get_full_name() or request.user.username,
+            'customer_email': request.user.email,
+            'customer_phone': allocated_shop.tenant_id.phone,
+            'allocated_shop': allocated_shop
+        }
+        
+        return render(request, 'payment.html', context)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@csrf_exempt
+def payment_callback(request, transaction_id):
+    """Callback view for payment verification"""
+    
+    # Get the transaction
+    transaction = get_object_or_404(RentPaymentTransaction, id=transaction_id)
+    
+    if request.method == "POST":
+        try:
+            # Get payment data
+            payment_data = request.POST
+            
+            # Verify signature
+            params_dict = {
+                'razorpay_order_id': payment_data.get('razorpay_order_id', ''),
+                'razorpay_payment_id': payment_data.get('razorpay_payment_id', ''),
+                'razorpay_signature': payment_data.get('razorpay_signature', '')
+            }
+            
+            # Verify the payment signature
+            client.utility.verify_payment_signature(params_dict)
+            
+            # Update transaction details
+            transaction.payment_id = payment_data.get('razorpay_payment_id', '')
+            transaction.payment_status = 'Success'
+            transaction.amount_paid = True
+            transaction.save()
+            
+            # Update AllocatedShop payment status
+            allocated_shop = transaction.shop
+            allocated_shop.payment_status = 'complete'
+            allocated_shop.save()
+            
+            return render(request, 'payment_success.html', {'transaction': transaction})
+        except Exception as e:
+            # Payment verification failed
+            transaction.payment_status = 'Failed'
+            transaction.attempts = transaction.attempts + 1
+            transaction.save()
+            
+            return render(request, 'payment_failure.html', {'error': str(e), 'transaction': transaction})
+    
+    # GET request, redirect to payment page
+    return redirect('initiate_payment')
+
+@login_required
+def payment_history(request):
+    """View to show payment history for the logged-in tenant"""
+    
+    try:
+        tenant = request.user.tenant
+        # Find all allocated shops for this tenant
+        allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant)
+        
+        # Get transactions where tenant field matches any of these allocated shops
+        transactions = RentPaymentTransaction.objects.filter(
+            tenant__in=allocated_shops
+        ).order_by('-created_at')
+        
+        context = {
+            'transactions': transactions
+        }
+        return render(request, 'payment_history.html', context)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+#Rent payment
+
+def shop_rent(request):
+    allocated_shops = AllocatedShop.objects.filter(tenant_id__tenant=request.user)
+
+    return render(request, "tenant/shop_rent.html", {"allocated_shops": allocated_shops})
+
 
 #Authentication 
 
@@ -78,7 +243,7 @@ def profile_view(request):
     try:
         if hasattr(user, 'tenant'):  # Check if user is a Tenant
             tenant = user.tenant
-            allocated_shops = AllocatedShop.objects.filter(tenant=tenant)  # Fix the query
+            allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant)  # Fix the query
             template_name = "tenant/profile.html"  # ✅ Tenant Profile Page
 
         elif hasattr(user, 'manager'):  # Check if user is a Manager
@@ -103,7 +268,7 @@ def edit_profile(request):
     tenant = None
     manager = None
     allocated_shops = None
-    shop_formset = None  # ✅ Initialize shop_formset to avoid referencing before assignment
+    shop_formset = None  
 
     try:
         if hasattr(user, 'tenant'):
@@ -125,6 +290,7 @@ def edit_profile(request):
                     tenant_form.save()
                     email_form.save()
                     shop_formset.save()
+                    messages.success(request, "Profile updated successfully!")
                     return redirect("profile")
 
         elif hasattr(user, 'manager'):
@@ -135,12 +301,16 @@ def edit_profile(request):
             template_name = "manager/edit_profile.html"  # ✅ Manager Edit Profile Page
 
             if request.method == "POST":
+                print("POST request received for manager")
                 manager_form = ManagerUpdateForm(request.POST, instance=manager)
                 email_form = EmailUpdateForm(request.POST, instance=user)
 
                 if manager_form.is_valid() and email_form.is_valid():
+                    print("Forms are valid, saving manager profile...")
                     manager_form.save()
                     email_form.save()
+                    messages.success(request, "Profile updated successfully!")
+                    print("✅ Success message added!")
                     return redirect("profile")
 
         else:
@@ -156,45 +326,6 @@ def edit_profile(request):
         'email_form': email_form
     })
 
-def tenant_profile(request):
-    tenant = request.user.tenant  # Get tenant details
-    allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant)  # Fetch allocated shops
-
-    context = {
-        'tenant': tenant,
-        'allocated_shops': allocated_shops,
-    }
-    return render(request, 'tenant/profile.html', context)
-
-
-@login_required
-def update_tenant(request):
-    tenant = request.user.tenant  # Get the tenant instance
-    allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant)  # Get all allocated shops
-    shop_ids = [shop.shop_id.id for shop in allocated_shops]  # Extract shop IDs
-
-    if request.method == "POST":
-        tenant_form = TenantUpdateForm(request.POST, instance=tenant)
-        email_form = EmailUpdateForm(request.POST, instance=request.user)
-        shop_formset = ShopFormSet(request.POST, queryset=Shop.objects.filter(id__in=shop_ids))  # Get all tenant shops
-
-        if tenant_form.is_valid() and email_form.is_valid() and shop_formset.is_valid():
-            tenant_form.save()
-            email_form.save()
-            shop_formset.save()  # Save all updated shops
-            return redirect('tenant_profile')  # Redirect to profile page after update
-    else:
-        tenant_form = TenantUpdateForm(instance=tenant)
-        email_form = EmailUpdateForm(instance=request.user)
-        shop_formset = ShopFormSet(queryset=Shop.objects.filter(id__in=shop_ids))
-
-    context = {
-        'tenant_form': tenant_form,
-        'email_form': email_form,
-        'shop_formset': shop_formset,
-    }
-    
-    return render(request, 'tenant/update_tenant.html', context)
 
 
 def my_shop(request):
@@ -263,65 +394,6 @@ def manager_dashboard(request):
     
     return render(request, "manager/manager_dashboard.html", context)
 
-@login_required
-def manager_profile(request):
-    user = request.user
-    tenant = None
-    manager = None
-    allocated_shops = None
-    managed_shops = None
-
-    try:
-        if hasattr(user, 'tenant'):
-            tenant = user.tenant
-            allocated_shops = tenant.allocatedshop_set.all()  # Shops assigned to the tenant
-        elif hasattr(user, 'manager'):
-            manager = user.manager
-            managed_shops = Shop.objects.filter(manager=manager)  # Shops managed by the manager
-    except ObjectDoesNotExist:
-        pass  # If no tenant or manager exists, do nothing
-
-    return render(request, 'profile.html', {
-        'tenant': tenant,
-        'manager': manager,
-        'allocated_shops': allocated_shops,
-        'managed_shops': managed_shops
-    })
-
-@login_required
-def edit_manager_profile(request):
-    user = request.user
-    tenant = getattr(user, 'tenant', None)
-    manager = getattr(user, 'manager', None)
-
-    if request.method == "POST":
-        email_form = EmailUpdateForm(request.POST, instance=user)
-
-        if tenant:
-            tenant_form = TenantUpdateForm(request.POST, request.FILES, instance=tenant)
-            if email_form.is_valid() and tenant_form.is_valid():
-                email_form.save()
-                tenant_form.save()
-                return redirect('profile')
-
-        elif manager:
-            manager_form = ManagerUpdateForm(request.POST, request.FILES, instance=manager)
-            if email_form.is_valid() and manager_form.is_valid():
-                email_form.save()
-                manager_form.save()
-                return redirect('profile')
-
-    else:
-        email_form = EmailUpdateForm(instance=user)
-        tenant_form = TenantUpdateForm(instance=tenant) if tenant else None
-        manager_form = ManagerUpdateForm(instance=manager) if manager else None
-
-    return render(request, 'edit_profile.html', {
-        'email_form': email_form,
-        'tenant_form': tenant_form,
-        'manager_form': manager_form
-    })
-
 def occupied_shops(request):
     shops = Shop.objects.filter(status='occupied')
     return render(request, "manager/occupied_shop.html", {"shops": shops})
@@ -351,6 +423,7 @@ def allocate_shop(request, shop_id):
 
             # Get the tenant's email
             tenant_email = allocation.tenant_id.tenant.email
+            print(f"Sending email to: {tenant_email}")
             subject = "Shop Allocation Confirmation"
             message = (
                 f"Dear {allocation.tenant_id.tenant.username},\n\n"
@@ -381,7 +454,7 @@ def shop_details(request, shop_id):
 
 def tenant_details(request, tenant_id):
     tenant = get_object_or_404(Tenant, id=tenant_id)
-    allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant_id)  # ✅ Fix here
+    allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant_id)  
 
     return render(request, "manager/tenant_details.html", {
         "tenant": tenant,
@@ -456,3 +529,24 @@ def update_complaint(request, complaint_id):
         form = ComplaintUpdateForm(instance=complaint)
 
     return render(request, "manager/update_complaint.html", {"form": form, "complaint": complaint})
+
+def admin_dashboard(request):
+    total_tenants = Tenant.objects.count()
+    total_shops = Shop.objects.count()
+    total_complaints = Complaint.objects.count()
+
+    context = {
+        'total_tenants': total_tenants,
+        'total_shops': total_shops,
+        'total_complaints': total_complaints,
+    }
+    return render(request, 'dashboard.html', context)
+
+#payment
+
+def rent_list(request):
+    # Assuming request.user is a tenant
+    #rents = RentRecord.objects.filter(allocated_shop__tenant__user=request.user).order_by('-month')
+    return render(request, 'tenant/rent_list.html')
+
+

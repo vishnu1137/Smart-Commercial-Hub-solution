@@ -1,8 +1,8 @@
 from django.core.mail import send_mail
 from django.conf import settings
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from hub.models import Complaint
+from hub.models import *
 
 @receiver(post_save, sender=Complaint)
 def send_complaint_resolved_email(sender, instance, **kwargs):
@@ -33,3 +33,10 @@ def send_complaint_resolved_email(sender, instance, **kwargs):
                 [tenant_email],
                 fail_silently=False,
             )
+
+@receiver(post_delete, sender=AllocatedShop)
+def update_shop_status_on_delete(sender, instance, **kwargs):
+    """Change shop status to 'vacant' when an allocated shop is deleted."""
+    if instance.shop_id:  # Ensure the shop exists
+        instance.shop_id.status = "vacant"
+        instance.shop_id.save()

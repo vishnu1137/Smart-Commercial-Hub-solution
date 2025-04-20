@@ -1,14 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.timezone import now
+from django.utils import timezone
 
 
 #shop 
-
-def generate_shop_no():
-    last_shop = Shop.objects.order_by('-id').first()
-    next_number = last_shop.id + 1 if last_shop else 1
-    return f"Shop-{next_number}"
 
 class Shop(models.Model):
 
@@ -28,7 +24,7 @@ class Shop(models.Model):
 
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=115)
-    shop_no = models.CharField(max_length=10,unique=True,default=generate_shop_no)
+    shop_no = models.CharField(max_length=10,unique=True)
     size = models.IntegerField(null=True,blank=True)
     location = models.CharField(max_length=115)
     shop_type = models.CharField(max_length=50,choices=SHOP_TYPES)
@@ -84,8 +80,29 @@ class AllocatedShop(models.Model):
     def __str__(self):
         return f"{self.tenant_id.tenant} - {self.shop_id.name}"
 
+class RentPaymentTransaction(models.Model):
+
+
+    id = models.AutoField(primary_key=True)
+    tenant = models.ForeignKey(AllocatedShop, on_delete=models.CASCADE)  # Link to rent entry
+    shop=models.ForeignKey(AllocatedShop, on_delete=models.CASCADE,related_name='shops')
+    transaction_id = models.CharField(max_length=200, unique=True)
+    payment_id = models.CharField(max_length=200, default="", blank=True)
+    amount = models.FloatField()
+    currency = models.CharField(max_length=4, default='INR')
+    payment_status = models.CharField(max_length=40, default='Pending')  # Success, Failed, etc.
+    amount_paid = models.BooleanField(default=False)
+    payment_method = models.CharField(max_length=100, default='UPI')  # Card, UPI, etc.
+    order_receipt_id = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    attempts = models.IntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.transaction_id} - {self.payment_status}"
+
 FLOOR_CHOICES = [
     ('all','All'),
+    ('ground','Ground'),
     ('floor 1','Floor 1'),
     ('floor 2','Floor 2'),
     ('floor 3','Floor 3'),

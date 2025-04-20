@@ -15,7 +15,7 @@
                         <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="Profile Image">
                     {% endif %}
 
-                    <h4 class="text-primary">{{ user.username }}</h4>
+                    <h4 class="text-primary">{{ user.username|upper }}</h4>
                     <p class="text-muted">{{ user.email }}</p>
 
                     <a href="{% url 'edit_profile' %}" class="btn btn-outline-primary btn-sm mt-2">Edit Profile</a>
@@ -30,7 +30,7 @@
                     <h5 class="mb-0">Profile Information</h5>
                 </div>
                 <div class="card-body">
-                    <p><strong>Username:</strong> {{ user.username }}</p>
+                    <p><strong>Username:</strong> {{ user.username|upper }}</p>
                     <p><strong>Email:</strong> {{ user.email }}</p>
 
                     {% if user.tenant %}
@@ -55,4 +55,14 @@
         </div>
     </div>
 </div>
+
+<script>
+    setTimeout(() => {
+        let alert = document.querySelector(".alert-success");
+        if (alert) {
+            alert.style.display = "none";
+        }
+    }, 3000);
+</script>
+
 {% endblock %}

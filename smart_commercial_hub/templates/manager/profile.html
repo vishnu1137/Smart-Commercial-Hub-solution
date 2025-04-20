@@ -2,15 +2,24 @@
 
 {% block content %}
 <div class="container mt-5">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <div class="row">
         <!-- Sidebar Profile Card -->
         <div class="col-md-4">
             <div class="card shadow-lg rounded text-center">
                 <div class="card-body">
                     {% if user.tenant.image %}
-                        <img src="{{ user.tenant.image.url }}" class="rounded-circle mb-3" width="150" height="150" alt="{{ user.username }}">
+                        <img src="{{ user.tenant.image.url }}" class="rounded-circle mb-3" width="150" height="150" alt="{{ user.username|upper }}">
                     {% elif user.manager.image %}
-                        <img src="{{ user.manager.image.url }}" class="rounded-circle mb-3" width="150" height="150" alt="{{ user.username }}">
+                        <img src="{{ user.manager.image.url }}" class="rounded-circle mb-3" width="150" height="150" alt="{{ user.username|upper }}">
                     {% else %}
                         <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="Profile Image">
                     {% endif %}
@@ -30,7 +39,7 @@
                     <h5 class="mb-0">Profile Information</h5>
                 </div>
                 <div class="card-body">
-                    <p><strong>Username:</strong> {{ user.username }}</p>
+                    <p><strong>Username:</strong> {{ user.username|upper }}</p>
                     <p><strong>Email:</strong> {{ user.email }}</p>
 
                     {% if user.tenant %}
@@ -55,4 +64,14 @@
         </div>
     </div>
 </div>
+
+<script>
+    setTimeout(() => {
+        let alert = document.querySelector(".alert-success");
+        if (alert) {
+            alert.style.display = "none";
+        }
+    }, 5000);
+</script>
+
 {% endblock %}

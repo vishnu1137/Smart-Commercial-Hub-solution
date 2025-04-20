@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Select Shop for Rent Payment</h3>
+                </div>
+                <div class="card-body">
+                    {% if allocated_shops %}
+                    <div class="row">
+                        {% for shop in allocated_shops %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                {% if shop.shop_id.image %}
+                                <img src="{{ shop.shop_id.image.url }}" class="card-img-top" alt="{{ shop.shop_id.name }}" style="height: 200px; object-fit: cover;">
+                                {% else %}
+                                <div class="bg-light text-center p-5">
+                                    <i class="fas fa-store fa-3x text-muted"></i>
+                                </div>
+                                {% endif %}
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ shop.shop_id.name }}</h5>
+                                    <div class="card-text">
+                                        <p><strong>Shop No:</strong> {{ shop.shop_id.shop_no }}</p>
+                                        <p><strong>Location:</strong> {{ shop.shop_id.location }}</p>
+                                        <p><strong>Rent Due:</strong> ₹{{ shop.rent_amount }}</p>
+                                        <p class="text-danger"><strong>Status:</strong> Payment Pending</p>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-white border-top-0">
+                                    <a href="{% url 'create_payment' shop.id %}" class="btn btn-primary btn-block">Pay Rent</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <h5 class="alert-heading">No Pending Payments</h5>
+                        <p>You don't have any rent payments pending at the moment.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
