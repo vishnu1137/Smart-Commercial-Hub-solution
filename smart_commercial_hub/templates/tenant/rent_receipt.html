@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4 mb-4" id="receipt-container">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between">
+            <h3>Rent Payment Receipt</h3>
+            <div>
+                <a href="{% url 'download_receipt_pdf' transaction.id %}" class="btn btn-light">
+                    <i class="fas fa-download"></i> Download PDF
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5>Receipt #{{ transaction.transaction_id|slice:":8" }}</h5>
+                    <p>Date: {{ transaction.created_at|date:"F d, Y" }}</p>
+                </div>
+                <div class="col-md-6 text-right">
+                    <span class="badge {% if transaction.payment_status == 'Success' %}bg-success{% else %}bg-warning{% endif %} p-2">
+                        {{ transaction.payment_status }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <h6>Property Details</h6>
+                    <p>
+                        <strong>Shop Name:</strong> {{ transaction.shop.shop_id.name }}<br>
+                        <strong>Shop No:</strong> {{ transaction.shop.shop_id.shop_no }}<br>
+                        <strong>Location:</strong> {{ transaction.shop.shop_id.location }}
+                    </p>
+                </div>
+                
+                <div class="col-md-4">
+                    <h6>Landlord/Manager</h6>
+                    <p>
+                        <strong>Name:</strong> Smart Commercial Hub<br>
+                        <strong>Email:</strong> management@commercialhub.com <br>
+                    </p>
+                </div>
+
+                <div class="col-md-4">
+                    <h6>Tenant Details</h6>
+                    <p>
+                        <strong>Name:</strong> {{ transaction.tenant.tenant_id.tenant.username }}<br>
+                        <strong>Email:</strong> {{ transaction.tenant.tenant_id.tenant.email }}<br>
+                        <strong>Phone:</strong> {{ transaction.tenant.tenant_id.phone }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Description</th>
+                            <th>Period</th>
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Monthly Rent</td>
+                            <td>{{ transaction.created_at|date:"F Y" }}</td>
+                            <td class="text-right">₹{{ transaction.amount }}</td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td colspan="2" class="text-right"><strong>Total Amount</strong></td>
+                            <td class="text-right"><strong>₹{{ transaction.amount }}</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h6>Payment Information</h6>
+                    <p>
+                        <strong>Payment Method:</strong> {{ transaction.payment_method }}<br>
+                        <strong>Payment ID:</strong> {{ transaction.payment_id }}<br>
+                        <strong>Transaction ID:</strong> {{ transaction.transaction_id }}<br>
+                        <strong>Date:</strong> {{ transaction.created_at|date:"F d, Y" }}
+                    </p>
+                </div>
+                <div class="col-md-6 text-right mt-5">
+                    <div style="border-top: 1px solid #000; width: 200px; display: inline-block; text-align: center; padding-top: 5px;">
+                        Authorized Signature
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-5">
+                <div class="col-12 text-center">
+                    <p class="text-muted">This receipt confirms that the landlord has received the tenant's payment as specified above.</p>
+                    <p class="text-muted">Thank you for your business.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
