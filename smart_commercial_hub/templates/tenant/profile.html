@@ -47,9 +47,11 @@
                         {% empty %}
                             <p class="text-danger">No shop allocated.</p>
                         {% endfor %}
+                        
                     {% elif user.manager %}
                         <p><strong>Role:</strong> Manager</p>
                     {% endif %}
+                    <br><br>
                 </div>
             </div>
         </div>

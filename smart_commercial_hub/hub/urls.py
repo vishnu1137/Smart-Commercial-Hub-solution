@@ -10,6 +10,8 @@ urlpatterns = [
     path('payment/callback/<int:transaction_id>/', payment_callback, name='payment_callback'),
     path('payment/history/', payment_history, name='payment_history'),
 
+    path('receipt/<int:transaction_id>/', view_receipt, name='view_receipt'),
+    path('receipt/<int:transaction_id>/pdf/', download_receipt_pdf, name='download_receipt_pdf'),
 
     path("password-reset/", auth_views.PasswordResetView.as_view(template_name="auth/password_reset.html"), name="password_reset"),
     path("password-reset/done/", auth_views.PasswordResetDoneView.as_view(template_name="auth/password_reset_done.html"), name="password_reset_done"),
@@ -46,7 +48,6 @@ urlpatterns = [
     path("post-announcement/", post_announcement, name="post_announcement"),
     path("manage-announcements/", manage_announcements, name="manage_announcements"),
     path("delete-announcement/<int:announcement_id>/", delete_announcement, name="delete_announcement"),
-    path('announcement-side/', submit_complaint, name='submit_complaint'),
     path("manage-complaints/", manage_complaints, name="manage_complaints"),
     path("update-complaint/<int:complaint_id>/", update_complaint, name="update_complaint"),
     #payment

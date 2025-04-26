@@ -12,7 +12,7 @@ class ShopnameUpdateForm(forms.ModelForm):
    class Meta:
     
        model = Shop
-       fields = ['name']
+       fields = ['name','shop_type','shop_no']
 
 class EmailUpdateForm(forms.ModelForm):
    class Meta:
@@ -24,7 +24,18 @@ class EmailUpdateForm(forms.ModelForm):
 class ComplaintForm(forms.ModelForm):
     class Meta:
         model = Complaint
-        fields = ['category', 'description','shop','priority']
+        fields = ['category', 'description', 'shop', 'priority']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'shop': forms.Select(attrs={'class': 'form-control'}),
+            'priority': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super(ComplaintForm, self).__init__(*args, **kwargs)
+        # By default, show no shops until we filter them by tenant
+        self.fields['shop'].queryset = AllocatedShop.objects.none()
 
 class ComplaintUpdateForm(forms.ModelForm):
     class Meta:
@@ -73,5 +84,18 @@ class ManagerUpdateForm(forms.ModelForm):
         fields = ['phone', 'image']
 
         
+class ShopNameOnlyForm(forms.ModelForm):
+    class Meta:
+        model = Shop
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(ShopNameOnlyForm, self).__init__(*args, **kwargs)
+        # Add read-only fields for display
+        self.shop_type = self.instance.shop_type
+        self.shop_no = self.instance.shop_no
 
 ShopFormSet = modelformset_factory(Shop, form=ShopnameUpdateForm, extra=0)

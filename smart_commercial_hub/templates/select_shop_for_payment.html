@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'tenant/base.html' %}
 
 {% block content %}
 <div class="container mt-5">
@@ -41,6 +41,12 @@
                     <div class="alert alert-info">
                         <h5 class="alert-heading">No Pending Payments</h5>
                         <p>You don't have any rent payments pending at the moment.</p>
+                    </div>
+
+                    <div class="card-footer text-center bg-light">
+                        <a href="{% url 'payment_history' %}" class="btn btn-outline-primary">
+                            View History
+                        </a>
                     </div>
                     {% endif %}
                 </div>

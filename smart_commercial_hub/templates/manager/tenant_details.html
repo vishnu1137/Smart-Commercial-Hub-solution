@@ -15,7 +15,7 @@
                     <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="No Image">
                     {% endif %}
                     
-                    <h4 class="card-title text-primary">{{ tenant.tenant.username|upper }}</h4>
+                    <h4 class="card-title text-primary">{{ shop.tenant_id.user.username|upper }}</h4>
                     <p class="card-text"><strong>Email:</strong> {{ tenant.tenant.email }}</p>
                     <p class="card-text"><strong>Phone:</strong> {{ tenant.phone }}</p>
                     <p class="card-text"><strong>Address:</strong> {{ tenant.address }}</p>
@@ -47,8 +47,8 @@
                                 <p><strong>Rent Amount:</strong> ₹{{ shop.rent_amount }}</p>
                                 <p><strong>Security Deposit:</strong> ₹{{ shop.security_deposit }}</p>
                                 <p><strong>Status:</strong> 
-                                    <span class="badge {% if shop.status == 'occupied' %}bg-success{% else %}bg-danger{% endif %}">
-                                        {{ shop.get_status_display }}
+                                    <span class="badge {% if shop.payment_status == 'paid' %} bg-success {% else %} bg-danger {% endif %}">
+                                        {{ shop.get_payment_status_display }}
                                     </span>
                                 </p>
         

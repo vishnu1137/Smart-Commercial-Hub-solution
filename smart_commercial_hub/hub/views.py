@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.core.mail import send_mail
@@ -8,22 +9,36 @@ from django.contrib.auth.decorators import login_required,user_passes_test
 from django.urls import reverse
 from hub.models import *
 from hub.forms import *
-from cashfree_pg.models.create_order_request import CreateOrderRequest
-from cashfree_pg.api_client import Cashfree
-from cashfree_pg.models.customer_details import CustomerDetails
-from cashfree_pg.models.order_meta import OrderMeta
 
+from django.db.models import Sum, Count, Avg, F, Q
+from django.utils import timezone
+from datetime import timedelta
+import calendar
+from django.contrib.admin.views.decorators import staff_member_required
 
 
 import json
 import razorpay
 import uuid
-from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
 from .models import AllocatedShop, RentPaymentTransaction
+
+from num2words import num2words
+from io import BytesIO
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+
+def render_to_pdf(template_src, context_dict={}):
+    template = get_template(template_src)
+    html = template.render(context_dict)
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
+    if not pdf.err:
+        return HttpResponse(result.getvalue(), content_type='application/pdf')
+    return None
 
 # Initialize Razorpay client
 client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
@@ -133,7 +148,7 @@ def payment_callback(request, transaction_id):
             allocated_shop.payment_status = 'complete'
             allocated_shop.save()
             
-            return render(request, 'payment_success.html', {'transaction': transaction})
+            return redirect('view_receipt', transaction_id=transaction.id)
         except Exception as e:
             # Payment verification failed
             transaction.payment_status = 'Failed'
@@ -146,8 +161,51 @@ def payment_callback(request, transaction_id):
     return redirect('initiate_payment')
 
 @login_required
+def view_receipt(request, transaction_id):
+    """View to display an HTML receipt for a completed transaction"""
+    transaction = get_object_or_404(RentPaymentTransaction, id=transaction_id)
+    
+    # Security check: ensure the logged-in user is the tenant who made this payment
+    if request.user != transaction.tenant.tenant_id.tenant:
+        return HttpResponse("Unauthorized", status=403)
+    
+    context = {
+        'transaction': transaction,
+    }
+    
+    return render(request, 'tenant/rent_receipt.html', context)
+
+@login_required
+def download_receipt_pdf(request, transaction_id):
+    """View to generate and download a PDF receipt"""
+    transaction = get_object_or_404(RentPaymentTransaction, id=transaction_id)
+    
+    # Security check: ensure the logged-in user is the tenant who made this payment
+    if request.user != transaction.tenant.tenant_id.tenant:
+        return HttpResponse("Unauthorized", status=403)
+    
+    context = {
+        'transaction': transaction,
+        'request': request,
+    }
+    
+    # Generate PDF from template
+    pdf = render_to_pdf('tenant/rent_receipt_pdf.html', context)
+    
+    # Generate a filename for the PDF
+    filename = f"rent_receipt_{transaction.transaction_id[:8]}_{timezone.now().strftime('%Y%m%d')}.pdf"
+    
+    # Configure the response to prompt a download
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+# Update payment history view to include receipt links
+@login_required
 def payment_history(request):
-    """View to show payment history for the logged-in tenant"""
+    """View to show payment history with receipt download options"""
     
     try:
         tenant = request.user.tenant
@@ -162,10 +220,10 @@ def payment_history(request):
         context = {
             'transactions': transactions
         }
-        return render(request, 'payment_history.html', context)
+        return render(request, 'tenant/payment_history.html', context)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
-
+    
 #Rent payment
 
 def shop_rent(request):
@@ -265,69 +323,76 @@ def profile_view(request):
 @login_required
 def edit_profile(request):
     user = request.user
-    tenant = None
-    manager = None
-    allocated_shops = None
-    shop_formset = None  
-
-    try:
-        if hasattr(user, 'tenant'):
-            tenant = user.tenant
-            allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant.id)  # ✅ Corrected field name
-
+    
+    if hasattr(user, 'tenant'):
+        tenant = user.tenant
+        
+        # Get tenant's allocated shops
+        allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant)
+        
+        # Extract shop IDs
+        shop_ids = [alloc.shop_id.id for alloc in allocated_shops]
+        shops = Shop.objects.filter(id__in=shop_ids)
+        
+        # Create a formset for editing just the shop names
+        ShopNameFormSet = modelformset_factory(
+            Shop, 
+            form=ShopNameOnlyForm,
+            extra=0
+        )
+        
+        if request.method == "POST":
+            tenant_form = TenantUpdateForm(request.POST, request.FILES, instance=tenant)
+            email_form = EmailUpdateForm(request.POST, instance=user)
+            shop_formset = ShopNameFormSet(request.POST, queryset=shops)
+            
+            if tenant_form.is_valid() and email_form.is_valid() and shop_formset.is_valid():
+                tenant_form.save()
+                email_form.save()
+                shop_formset.save()
+                messages.success(request, "Profile and shop details updated successfully!")
+                return redirect("profile")
+            else:
+                messages.error(request, "Please correct the errors below.")
+        else:
             tenant_form = TenantUpdateForm(instance=tenant)
             email_form = EmailUpdateForm(instance=user)
-            shop_formset = ShopFormSet(queryset=Shop.objects.filter(id__in=[shop.shop_id.id for shop in allocated_shops]))
-
-            template_name = "tenant/edit_profile.html"  # ✅ Tenant Edit Profile Page
-
-            if request.method == "POST":
-                tenant_form = TenantUpdateForm(request.POST, instance=tenant)
-                email_form = EmailUpdateForm(request.POST, instance=user)
-                shop_formset = ShopFormSet(request.POST, queryset=Shop.objects.filter(id__in=[shop.shop_id.id for shop in allocated_shops]))
-
-                if tenant_form.is_valid() and email_form.is_valid() and shop_formset.is_valid():
-                    tenant_form.save()
-                    email_form.save()
-                    shop_formset.save()
-                    messages.success(request, "Profile updated successfully!")
-                    return redirect("profile")
-
-        elif hasattr(user, 'manager'):
-            manager = user.manager
+            shop_formset = ShopNameFormSet(queryset=shops)
+        
+        return render(request, "tenant/edit_profile.html", {
+            'tenant_form': tenant_form,
+            'email_form': email_form,
+            'shop_formset': shop_formset,
+        })
+    
+    elif hasattr(user, 'manager'):
+        # Manager handling code remains the same
+        manager = user.manager
+        
+        if request.method == "POST":
+            manager_form = ManagerUpdateForm(request.POST, request.FILES, instance=manager)
+            email_form = EmailUpdateForm(request.POST, instance=user)
+            
+            if manager_form.is_valid() and email_form.is_valid():
+                manager_form.save()
+                email_form.save()
+                messages.success(request, "Profile updated successfully!")
+                return redirect("profile")
+            else:
+                messages.error(request, "Error updating profile. Please check the form.")
+        else:
             manager_form = ManagerUpdateForm(instance=manager)
             email_form = EmailUpdateForm(instance=user)
-
-            template_name = "manager/edit_profile.html"  # ✅ Manager Edit Profile Page
-
-            if request.method == "POST":
-                print("POST request received for manager")
-                manager_form = ManagerUpdateForm(request.POST, instance=manager)
-                email_form = EmailUpdateForm(request.POST, instance=user)
-
-                if manager_form.is_valid() and email_form.is_valid():
-                    print("Forms are valid, saving manager profile...")
-                    manager_form.save()
-                    email_form.save()
-                    messages.success(request, "Profile updated successfully!")
-                    print("✅ Success message added!")
-                    return redirect("profile")
-
-        else:
-            return redirect("dashboard")  
-
-    except ObjectDoesNotExist:  
-        return redirect("dashboard")  
-
-    return render(request, template_name, {
-        'tenant_form': tenant_form if tenant else None,
-        'shop_formset': shop_formset if tenant else None,
-        'manager_form': manager_form if manager else None,
-        'email_form': email_form
-    })
-
-
-
+        
+        return render(request, "manager/edit_profile.html", {
+            'manager_form': manager_form,
+            'email_form': email_form,
+        })
+    
+    else:
+        messages.warning(request, "You don't have a profile to edit.")
+        return redirect("dashboard")
+    
 def my_shop(request):
     allocated_shops = AllocatedShop.objects.filter(tenant_id__tenant=request.user)
 
@@ -344,27 +409,56 @@ def announcements(request):
 
 @login_required
 def submit_complaint(request):
+    # Ensure the user is a tenant
+    if not hasattr(request.user, 'tenant'):
+        messages.error(request, "Only tenants can submit complaints.")
+        return redirect('dashboard')
+    
+    tenant = request.user.tenant
+    
+    # Get only allocations for this tenant
+    allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant)
+    
     if request.method == "POST":
-        form = ComplaintForm(request.POST)
+        form = ComplaintForm(request.POST, request.FILES)
+        
+        # Limit shop choices to AllocatedShop instances for this tenant
+        form.fields['shop'].queryset = allocated_shops
+        
         if form.is_valid():
             complaint = form.save(commit=False)
-            complaint.tenant = request.user  
+            complaint.tenant = request.user
             complaint.save()
-            return redirect('view_complaints')  
+            messages.success(request, "Complaint submitted successfully!")
+            return redirect('view_complaints')
+        else:
+            messages.error(request, "Please correct the errors below.")
     else:
         form = ComplaintForm()
+        # Limit shop choices to AllocatedShop instances for this tenant
+        form.fields['shop'].queryset = allocated_shops
+    
     return render(request, 'tenant/submit_complaint.html', {'form': form})
 
 @login_required
 def view_complaints(request):
-    try:
-        tenant_shops = AllocatedShop.objects.filter(tenant_id__tenant=request.user)
-        complaints = Complaint.objects.filter(shop__in=tenant_shops)  # Fetch complaints related to tenant shops
-    except Complaint.DoesNotExist:
-        complaints = None
-
-    return render(request, "tenant/view_complaints.html", {"complaints": complaints,"tenant_shops":tenant_shops})
-
+    # Ensure the user is a tenant
+    if not hasattr(request.user, 'tenant'):
+        messages.error(request, "Only tenants can view their complaints.")
+        return redirect('dashboard')
+        
+    tenant = request.user.tenant
+    
+    # Get shop allocations for this tenant
+    allocated_shops = AllocatedShop.objects.filter(tenant_id=tenant)
+    
+    # Get complaints related to these allocated shops
+    complaints = Complaint.objects.filter(shop__in=allocated_shops)
+    
+    return render(request, "tenant/view_complaints.html", {
+        "complaints": complaints,
+        "tenant_shops": allocated_shops
+    })
 
 #MANAGER
 
@@ -549,4 +643,361 @@ def rent_list(request):
     #rents = RentRecord.objects.filter(allocated_shop__tenant__user=request.user).order_by('-month')
     return render(request, 'tenant/rent_list.html')
 
+@staff_member_required
+def admin_reports(request):
+    """Dashboard for all available report types"""
+    return render(request, 'admin/reports_dashboard.html')
 
+@staff_member_required
+def shop_occupancy_report(request):
+    """Generate a report on shop occupancy status"""
+    total_shops = Shop.objects.count()
+    occupied_shops = Shop.objects.filter(status='occupied').count()
+    vacant_shops = Shop.objects.filter(status='vacant').count()
+    
+    # Get occupancy by shop type
+    shop_types_data = Shop.objects.values('shop_type').annotate(
+        total=Count('id'),
+        occupied=Count('id', filter=Q(status='occupied')),
+        vacant=Count('id', filter=Q(status='vacant'))
+    )
+    
+    # Calculate occupancy rate
+    occupancy_rate = (occupied_shops / total_shops * 100) if total_shops > 0 else 0
+    
+    context = {
+        'total_shops': total_shops,
+        'occupied_shops': occupied_shops,
+        'vacant_shops': vacant_shops,
+        'occupancy_rate': round(occupancy_rate, 2),
+        'shop_types_data': shop_types_data
+    }
+    
+    if 'download_pdf' in request.GET:
+        # Generate PDF
+        template_name = 'admin/reports/shop_occupancy_pdf.html'
+        context['is_pdf'] = True
+        pdf = render_to_pdf(template_name, context)
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"shop_occupancy_report_{timezone.now().strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    return render(request, 'admin/reports/shop_occupancy.html', context)
+
+@staff_member_required
+def rental_income_report(request):
+    """Generate a report on rental income"""
+    # Get current month and year
+    today = timezone.now()
+    current_month = today.month
+    current_year = today.year
+    
+    # Extract month and year from request or use current
+    month = int(request.GET.get('month', current_month))
+    year = int(request.GET.get('year', current_year))
+    
+    # Start and end dates for the selected month
+    start_date = datetime(year, month, 1).date()
+    last_day = calendar.monthrange(year, month)[1]
+    end_date = datetime(year, month, last_day).date()
+    
+    # Get rent transactions for the period
+    transactions = RentPaymentTransaction.objects.filter(
+        payment_status='Success',
+        created_at__gte=start_date,
+        created_at__lte=end_date + timedelta(days=1)  # Add a day to include the entire end date
+    )
+    
+    # Calculate total income
+    total_income = transactions.aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Get income by shop type
+    income_by_shop_type = []
+    for shop_type in dict(Shop.SHOP_TYPES).keys():
+        amount = transactions.filter(
+            shop__shop_id__shop_type=shop_type
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        income_by_shop_type.append({
+            'shop_type': dict(Shop.SHOP_TYPES)[shop_type],
+            'amount': amount
+        })
+    
+    # Highest and lowest paying shops
+    best_shops = transactions.values(
+        'shop__shop_id__name', 'shop__shop_id__shop_no'
+    ).annotate(
+        total_paid=Sum('amount')
+    ).order_by('-total_paid')[:5]
+    
+    context = {
+        'month': calendar.month_name[month],
+        'year': year,
+        'total_income': total_income,
+        'transaction_count': transactions.count(),
+        'income_by_shop_type': income_by_shop_type,
+        'best_shops': best_shops,
+        'all_months': [(i, calendar.month_name[i]) for i in range(1, 13)],
+        'current_month': month,
+        'current_year': year,
+        'years': range(current_year-2, current_year+1)
+    }
+    
+    if 'download_pdf' in request.GET:
+        # Generate PDF
+        template_name = 'admin/reports/rental_income_pdf.html'
+        context['is_pdf'] = True
+        pdf = render_to_pdf(template_name, context)
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"rental_income_report_{month}_{year}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    return render(request, 'admin/reports/rental_income.html', context)
+
+@staff_member_required
+def lease_expiry_report(request):
+    """Generate a report on upcoming lease expirations"""
+    today = timezone.now().date()
+    
+    # Get leases expiring in the next 30, 60, and 90 days
+    expiring_30_days = AllocatedShop.objects.filter(
+        lease_end__gte=today,
+        lease_end__lte=today + timedelta(days=30),
+        status='active'
+    ).order_by('lease_end')
+    
+    expiring_60_days = AllocatedShop.objects.filter(
+        lease_end__gt=today + timedelta(days=30),
+        lease_end__lte=today + timedelta(days=60),
+        status='active'
+    ).order_by('lease_end')
+    
+    expiring_90_days = AllocatedShop.objects.filter(
+        lease_end__gt=today + timedelta(days=60),
+        lease_end__lte=today + timedelta(days=90),
+        status='active'
+    ).order_by('lease_end')
+    
+    # Get expired leases that are still active
+    expired_leases = AllocatedShop.objects.filter(
+        lease_end__lt=today,
+        status='active'
+    ).order_by('lease_end')
+    
+    context = {
+        'today': today,
+        'expiring_30_days': expiring_30_days,
+        'expiring_60_days': expiring_60_days,
+        'expiring_90_days': expiring_90_days,
+        'expired_leases': expired_leases,
+    }
+    
+    if 'download_pdf' in request.GET:
+        # Generate PDF
+        template_name = 'admin/reports/lease_expiry_pdf.html'
+        context['is_pdf'] = True
+        pdf = render_to_pdf(template_name, context)
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"lease_expiry_report_{today.strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    return render(request, 'admin/reports/lease_expiry.html', context)
+
+@staff_member_required
+def complaint_analysis_report(request):
+    """Generate a report analyzing complaints"""
+    # Get date range from request or use last 30 days
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=int(request.GET.get('days', 30)))
+    
+    # Get complaints for the period
+    complaints = Complaint.objects.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date
+    )
+    
+    # Total complaints by status
+    complaints_by_status = complaints.values('status').annotate(count=Count('id'))
+    
+    # Complaints by category
+    complaints_by_category = complaints.values('category').annotate(count=Count('id'))
+    
+    # Average resolution time for resolved complaints
+    avg_resolution_time = complaints.filter(
+        status='resolved',
+        resolved_at__isnull=False
+    ).annotate(
+        resolution_time=F('resolved_at') - F('created_at')
+    ).aggregate(avg_time=Avg('resolution_time'))
+    
+    avg_days = None
+    if avg_resolution_time['avg_time']:
+        avg_days = avg_resolution_time['avg_time'].total_seconds() / (3600 * 24)  # Convert to days
+    
+    # Shops with most complaints
+    shops_with_most_complaints = complaints.values(
+        'shop__shop_id__name', 'shop__shop_id__shop_no'
+    ).annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+    
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_complaints': complaints.count(),
+        'complaints_by_status': complaints_by_status,
+        'complaints_by_category': complaints_by_category,
+        'avg_resolution_time_days': round(avg_days, 1) if avg_days else None,
+        'shops_with_most_complaints': shops_with_most_complaints,
+        'days_options': [30, 60, 90, 180]
+    }
+    
+    if 'download_pdf' in request.GET:
+        # Generate PDF
+        template_name = 'admin/reports/complaint_analysis_pdf.html'
+        context['is_pdf'] = True
+        pdf = render_to_pdf(template_name, context)
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"complaint_analysis_report_{end_date.strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    return render(request, 'admin/reports/complaint_analysis.html', context)
+
+@staff_member_required
+def tenant_report(request):
+    """Generate a report on tenant information and status"""
+    # Get all tenants
+    tenants = Tenant.objects.all()
+    
+    # Calculate tenure for each tenant
+    tenant_data = []
+    for tenant in tenants:
+        allocations = AllocatedShop.objects.filter(tenant_id=tenant)
+        shops = [a.shop_id.name for a in allocations]
+        
+        # Find earliest lease start date to calculate tenure
+        earliest_lease = allocations.order_by('lease_start').first()
+        tenure_days = None
+        if earliest_lease:
+            tenure_days = (timezone.now().date() - earliest_lease.lease_start).days
+        
+        # Calculate total rent paid
+        total_paid = RentPaymentTransaction.objects.filter(
+            tenant__tenant_id=tenant,
+            payment_status='Success'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        tenant_data.append({
+            'tenant': tenant,
+            'shops': shops,
+            'shop_count': len(shops),
+            'tenure_days': tenure_days,
+            'tenure_years': round(tenure_days / 365, 1) if tenure_days else None,
+            'total_paid': total_paid
+        })
+    
+    # Sort by tenure (longest first)
+    tenant_data.sort(key=lambda x: x['tenure_days'] or 0, reverse=True)
+    
+    context = {
+        'tenant_data': tenant_data,
+        'total_tenants': tenants.count()
+    }
+    
+    if 'download_pdf' in request.GET:
+        # Generate PDF
+        template_name = 'admin/reports/tenant_report_pdf.html'
+        context['is_pdf'] = True
+        pdf = render_to_pdf(template_name, context)
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"tenant_report_{timezone.now().strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    return render(request, 'admin/reports/tenant_report.html', context)
+
+@staff_member_required
+def comprehensive_mall_report(request):
+    """Generate a comprehensive report with all key metrics"""
+    today = timezone.now().date()
+    
+    # Shop metrics
+    total_shops = Shop.objects.count()
+    occupied_shops = Shop.objects.filter(status='occupied').count()
+    vacant_shops = Shop.objects.filter(status='vacant').count()
+    occupancy_rate = (occupied_shops / total_shops * 100) if total_shops > 0 else 0
+    
+    # Shop breakdown by type
+    shop_type_distribution = Shop.objects.values('shop_type').annotate(count=Count('id'))
+    
+    # Tenant metrics
+    total_tenants = Tenant.objects.count()
+    
+    # Revenue metrics - current month
+    first_day_of_month = today.replace(day=1)
+    last_day_of_month = (first_day_of_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    
+    current_month_revenue = RentPaymentTransaction.objects.filter(
+        payment_status='Success',
+        created_at__date__gte=first_day_of_month,
+        created_at__date__lte=last_day_of_month
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Revenue metrics - year to date
+    first_day_of_year = today.replace(month=1, day=1)
+    ytd_revenue = RentPaymentTransaction.objects.filter(
+        payment_status='Success',
+        created_at__date__gte=first_day_of_year,
+        created_at__date__lte=today
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Pending payments
+    pending_payments = AllocatedShop.objects.filter(payment_status='pending').count()
+    pending_amount = AllocatedShop.objects.filter(
+        payment_status='pending'
+    ).aggregate(total=Sum('rent_amount'))['total'] or 0
+    
+    # Complaints
+    active_complaints = Complaint.objects.filter(
+        status__in=['pending', 'in_progress']
+    ).count()
+    
+    # Upcoming lease expirations
+    upcoming_expirations = AllocatedShop.objects.filter(
+        lease_end__gte=today,
+        lease_end__lte=today + timedelta(days=30),
+        status='active'
+    ).count()
+    
+    context = {
+        'report_date': today,
+        'total_shops': total_shops,
+        'occupied_shops': occupied_shops,
+        'vacant_shops': vacant_shops,
+        'occupancy_rate': round(occupancy_rate, 2),
+        'shop_type_distribution': shop_type_distribution,
+        'total_tenants': total_tenants,
+        'current_month': today.strftime('%B %Y'),
+        'current_month_revenue': current_month_revenue,
+        'ytd_revenue': ytd_revenue,
+        'pending_payments': pending_payments,
+        'pending_amount': pending_amount,
+        'active_complaints': active_complaints,
+        'upcoming_expirations': upcoming_expirations
+    }
+    
+    if 'download_pdf' in request.GET:
+        # Generate PDF
+        template_name = 'admin/reports/comprehensive_report_pdf.html'
+        context['is_pdf'] = True
+        pdf = render_to_pdf(template_name, context)
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"mall_comprehensive_report_{today.strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    return render(request, 'admin/reports/comprehensive_report.html', context)

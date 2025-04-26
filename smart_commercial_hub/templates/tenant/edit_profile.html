@@ -1,74 +1,203 @@
-{% extends "tenant/base.html" %}
+{% extends 'tenant/base.html' %}
+{% load static %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-section {
+        transition: all 0.3s ease;
+    }
+    
+    .profile-section:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .form-control:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+    
+    .btn-primary {
+        background-color: #4e73df;
+        border-color: #4e73df;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2e59d9;
+        border-color: #2653d4;
+    }
+    
+    .card-header {
+        background-color: #f8f9fc;
+        border-bottom: 1px solid #e3e6f0;
+    }
+    
+    .section-title {
+        color: #5a5c69;
+        font-weight: 600;
+    }
+    
+    .shop-table {
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    
+    .shop-table thead {
+        background-color: #f8f9fc;
+    }
+    
+    .save-btn {
+        min-width: 120px;
+    }
+    
+    .field-label {
+        font-weight: 600;
+        color: #5a5c69;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-lg rounded">
-                <div class="card-header bg-primary text-white text-center">
-                    <h4>Edit Profile</h4>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2 class="text-primary"><i class="fas fa-user-edit mr-2"></i>Edit Profile</h2>
+            <p class="text-muted">Update your personal information and Shop Name</p>
+            <hr>
+        </div>
+    </div>
 
-                        <h5 class="text-secondary">Personal Details</h5>
+    {% if messages %}
+    <div class="row">
+        <div class="col-md-12">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="profile-form">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Personal Information Section -->
+            <div class="col-lg-6 mb-4">
+                <div class="card profile-section">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold section-title">
+                            <i class="fas fa-user mr-2"></i>Personal Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label"><strong>Username</strong></label>
-                            <input type="text" class="form-control" value="{{ user.username|upper }}" disabled>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label"><strong>Email</strong></label>
+                            <label for="{{ email_form.email.id_for_label }}" class="field-label">Email Address</label>
                             {{ email_form.email }}
-                        </div>
-
-                        {% if tenant_form %}
-                        <div class="mb-3">
-                            <label class="form-label"><strong>Phone</strong></label>
-                            {{ tenant_form.phone }}
+                            {% if email_form.email.errors %}
+                            <div class="text-danger small mt-1">{{ email_form.email.errors }}</div>
+                            {% endif %}
                         </div>
                         
-                        <div class="mb-3">
-                            <label class="form-label"><strong>Address</strong></label>
-                            {{ tenant_form.address }}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ tenant_form.phone.id_for_label }}" class="field-label">Phone Number</label>
+                                {{ tenant_form.phone }}
+                                {% if tenant_form.phone.errors %}
+                                <div class="text-danger small mt-1">{{ tenant_form.phone.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ tenant_form.address.id_for_label }}" class="field-label">Address</label>
+                                {{ tenant_form.address }}
+                                {% if tenant_form.address.errors %}
+                                <div class="text-danger small mt-1">{{ tenant_form.address.errors }}</div>
+                                {% endif %}
+                            </div>
                         </div>
-                        {% endif %}
-                        
-                        <!-- Shop Details -->
-                        {% if shop_formset %}
-                            <h5 class="text-secondary">Shop Details</h5>
-                            {{ shop_formset.management_form }}
-                            {% for form in shop_formset %}
-                                <div class="mb-3">
-                                    <label class="form-label"><strong>Shop Name</strong></label>
-                                    {{ form.name }}
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label"><strong>Shop Type</strong></label>
-                                    {{ form.shop_type }}
-                                </div>
-                                <hr>
-                            {% endfor %}
-                        {% endif %}
-
-                        {% if manager_form %}
-                        <h5 class="text-secondary mt-3">Manager Information</h5>
-                        <div class="mb-3">
-                            <label class="form-label"><strong>Role</strong></label>
-                            <input type="text" class="form-control" value="Manager" disabled>
-                        </div>
-                        {% endif %}
-
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Update Profile</button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
-                <div class="card-footer text-center">
-                    <a href="{% url 'profile' %}" class="btn btn-outline-primary">Back to Profile</a>
+            </div>
+            
+            <!-- Shop Information Section -->
+            <div class="col-lg-6 mb-4">
+                <div class="card profile-section">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold section-title">
+                            <i class="fas fa-store mr-2"></i>Shop Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {{ shop_formset.management_form }}
+                        <div class="table-responsive">
+                            <table class="table shop-table">
+                                <thead>
+                                    <tr>
+                                        <th>Shop Name</th>
+                                        <th>Shop Type</th>
+                                        <th>Shop Number</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for shop_form in shop_formset %}
+                                    <tr>
+                                        <td>
+                                            {{ shop_form.id }}
+                                            {{ shop_form.name }}
+                                            {% if shop_form.name.errors %}
+                                            <div class="text-danger small mt-1">{{ shop_form.name.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-muted">{{ shop_form.instance.shop_type }}</td>
+                                        <td class="text-muted">{{ shop_form.instance.shop_no }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+        
+        <!-- Submit Button Row -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'profile' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left mr-1"></i> Back to Profile
+                    </a>
+                    <button type="submit" class="btn btn-primary save-btn">
+                        <i class="fas fa-save mr-1"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Add animation when form is submitted
+        $("#profile-form").on("submit", function() {
+            $(".save-btn").html('<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Saving...');
+            $(".save-btn").attr("disabled", true);
+        });
+        
+        // Focus effect for input fields
+        $(".form-control").focus(function() {
+            $(this).closest(".mb-3").addClass("animate__animated animate__pulse");
+        }).blur(function() {
+            $(this).closest(".mb-3").removeClass("animate__animated animate__pulse");
+        });
+    });
+</script>
 {% endblock %}
