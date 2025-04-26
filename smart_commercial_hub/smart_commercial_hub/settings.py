@@ -42,18 +42,10 @@ INSTALLED_APPS = [
     'hub',
 ]
 
-# Cashfree Test Keys
-CASHFREE_APP_ID = "TEST1056211211986a7ff30b3dd4380921126501"
-CASHFREE_SECRET_KEY = "cfsk_ma_test_39c42d1b6268182898e0e5fd1152d109_6701475a"
-CASHFREE_BASE_URL = 'https://sandbox.cashfree.com/pg'
-CASHFREE_DEBUG = True
 
-RAZORPAY_KEY_ID = 'rzp_test_29bK1Avyz9sZ8j'
-RAZORPAY_KEY_SECRET = 'lDDjnTKienvu7JTgO9Yj89cn'
+RAZORPAY_KEY_ID = 
+RAZORPAY_KEY_SECRET = 
 
-#TEST1056211211986a7ff30b3dd4380921126501  ------  app
-#cfsk_ma_test_39c42d1b6268182898e0e5fd1152d109_6701475a ------ secr
-#4111 1111 1111 1111
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
