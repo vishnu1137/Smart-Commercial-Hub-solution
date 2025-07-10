@@ -4,29 +4,30 @@
 <div class="container">
     <h2 class="text-center my-4">Occupied Shops</h2>
     <div class="row">
-        {% for shop in shops %}
-        <div class="col-md-4">
-            <div class="card shadow-lg mb-4">
-                {% if shop.image %}
-                <img src="{{ shop.image.url }}" class="card-img-top" alt="{{ shop.name }}">
-                {% else %}
-                <img src="https://via.placeholder.com/300x200?text=No+Image" class="card-img-top" alt="No Image">
-                {% endif %}
-                <div class="card-body">
-                    <h5 class="card-title text-danger">{{ shop.name }}</h5>
-                    <p><strong>Shop No:</strong> {{ shop.shop_no }}</p>
-                    <p><strong>Tenant:</strong> {{ shop.tenant_id.tenant.username }}</p>
-                    <p><strong>Location:</strong> {{ shop.location }}</p>
-                    <span class="badge bg-danger">Occupied</span>
-                    <div class="mt-3">
-                        <a href="{% url 'shop_details' shop.id %}" class="btn btn-sm btn-info">View Details</a>
-                    </div>
+        {% for alloc in allocated_shops %}
+    <div class="col-md-4">
+        <div class="card shadow-lg mb-4">
+            {% if alloc.shop_id.image %}
+            <img src="{{ alloc.shop_id.image.url }}" class="card-img-top" alt="{{ alloc.shop_id.name }}">
+            {% else %}
+            <img src="https://via.placeholder.com/300x200?text=No+Image" class="card-img-top" alt="No Image">
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title text-danger">{{ alloc.shop_id.name }}</h5>
+                <p><strong>Shop No:</strong> {{ alloc.shop_id.shop_no }}</p>
+                <p><strong>Tenant:</strong> {{ alloc.tenant_id.tenant.get_full_name|upper }}</p>
+                <p><strong>Location:</strong> {{ alloc.shop_id.location }}</p>
+                <span class="badge bg-danger">Occupied</span>
+                <div class="mt-3">
+                    <a href="{% url 'shop_details' alloc.shop_id.id %}" class="btn btn-sm btn-info">View Details</a>
                 </div>
             </div>
         </div>
-        {% empty %}
-        <p class="text-center text-muted">No occupied shops.</p>
-        {% endfor %}
+    </div>
+{% empty %}
+    <p class="text-center text-muted">No occupied shops.</p>
+{% endfor %}
+
     </div>
 </div>
 {% endblock %}

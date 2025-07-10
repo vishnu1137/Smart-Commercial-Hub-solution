@@ -1,0 +1,135 @@
+<!-- templates/report_view.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manager Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body style="background-color: #f8f9fa;">
+
+<div class="container mt-5">
+
+    <div class="text-center mb-5">
+        <h2>Manager Report</h2>
+        <p class="text-muted">From {{ start_date }} to {{ end_date }}</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- Shops Status -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Shop Status</h5>
+                    <p class="mb-2">Occupied Shops: <strong>{{ occupied_count }}</strong></p>
+                    <p>Vacant Shops: <strong>{{ vacant_count }}</strong></p>
+                    <canvas id="shopChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Status -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Rent Payment Status</h5>
+                    {% for ps in payment_status %}
+                        <p>{{ ps.payment_status|title }}: <strong>{{ ps.count }}</strong></p>
+                    {% endfor %}
+                    <canvas id="paymentChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Complaint Categories Card -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Complaint Categories</h5>
+                    {% for cat in complaint_category %}
+                        <p>{{ cat.category|title }} : <strong>{{ cat.count }}</strong></p>
+                    {% endfor %}
+                    <canvas id="categoryChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Complaint Status -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Complaint Status</h5>
+                    {% for cs in complaint_status %}
+                        <p>{{ cs.status|title }}: <strong>{{ cs.count }}</strong></p>
+                    {% endfor %}
+                    <canvas id="complaintChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-5">
+        <a href="{% url 'download_pdf' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-danger btn-lg mx-2" target="_blank">Download PDF</a>
+        <a href="{% url 'download_excel' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-success btn-lg mx-2" target="_blank">Download Excel</a>
+    </div>
+<br><br>
+</div>
+
+<script>
+var ctxShop = document.getElementById('shopChart').getContext('2d');
+new Chart(ctxShop, {
+    type: 'pie',
+    data: {
+        labels: ['Occupied', 'Vacant'],
+        datasets: [{
+            data: [{{ occupied_count }}, {{ vacant_count }}],
+            backgroundColor: ['#28a745', '#ffc107'],
+        }]
+    }
+});
+
+var ctxCategory = document.getElementById('categoryChart').getContext('2d');
+new Chart(ctxCategory, {
+    type: 'pie',
+    data: {
+        labels: [{% for cat in complaint_category %}'{{ cat.category|title }}',{% endfor %}],
+        datasets: [{
+            label: 'Complaints by Category',
+            data: [{% for cat in complaint_category %}{{ cat.count }},{% endfor %}],
+            backgroundColor: ['#6f42c1', '#20c997', '#ffc107', '#dc3545']
+        }]
+    }
+});
+
+var ctxPayment = document.getElementById('paymentChart').getContext('2d');
+new Chart(ctxPayment, {
+    type: 'bar',
+    data: {
+        labels: [{% for ps in payment_status %}'{{ ps.payment_status|title }}',{% endfor %}],
+        datasets: [{
+            label: 'Payments',
+            data: [{% for ps in payment_status %}{{ ps.count }},{% endfor %}],
+            backgroundColor: ['#007bff', '#dc3545', '#ffc107']
+        }]
+    }
+});
+
+var ctxComplaint = document.getElementById('complaintChart').getContext('2d');
+new Chart(ctxComplaint, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for cs in complaint_status %}'{{ cs.status|title }}',{% endfor %}],
+        datasets: [{
+            label: 'Complaints',
+            data: [{% for cs in complaint_status %}{{ cs.count }},{% endfor %}],
+            backgroundColor: ['#17a2b8', '#fd7e14', '#28a745']
+        }]
+    }
+});
+</script>
+
+</body>
+</html>

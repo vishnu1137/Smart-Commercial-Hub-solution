@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+        h2, h3 { color: #333; }
+    </style>
+</head>
+<body>
+    <h2>Mall Report - {{ selected_month }}</h2>
+
+    <h3>Shop Details</h3>
+    <table>
+        <tr>
+            <th>Shop No</th><th>Name</th><th>Size</th><th>Location</th><th>Type</th><th>Status</th><th>Tenant</th>
+        </tr>
+        {% for shop in shops %}
+        <tr>
+            <td>{{ shop.shop_no }}</td>
+            <td>{{ shop.name }}</td>
+            <td>{{ shop.size }}</td>
+            <td>{{ shop.location }}</td>
+            <td>{{ shop.get_shop_type_display }}</td>
+            <td>{{ shop.get_status_display }}</td>
+            <td>
+                {% for allocated in allocated_shops %}
+                    {% if allocated.shop_id.id == shop.id %}
+                        {{ allocated.tenant_id.tenant.username }}
+                    {% endif %}
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h3>Complaint Status</h3>
+    <table>
+        <tr>
+            <th>Shop No</th><th>Tenant</th><th>Category</th><th>Status</th><th>Priority</th><th>Date</th>
+        </tr>
+        {% for complaint in complaints %}
+        <tr>
+            <td>{{ complaint.shop.shop_id.shop_no }}</td>
+            <td>{{ complaint.shop.tenant_id.tenant.username }}</td>
+            <td>{{ complaint.get_category_display }}</td>
+            <td>{{ complaint.get_status_display }}</td>
+            <td>{{ complaint.get_priority_display }}</td>
+            <td>{{ complaint.created_at|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h3>Rent Payment Details</h3>
+    <table>
+        <tr>
+            <th>Shop No</th><th>Tenant</th><th>Amount</th><th>Status</th><th>Payment Date</th>
+        </tr>
+        {% for payment in rent_payments %}
+        <tr>
+            <td>{{ payment.shop.shop_id.shop_no }}</td>
+            <td>{{ payment.tenant.tenant_id.tenant.username }}</td>
+            <td>{{ payment.amount }}</td>
+            <td>{{ payment.payment_status }}</td>
+            <td>{{ payment.created_at|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!-- templates/report.html -->
+
+{% load static %}
+<html>
+<head>
+    <title>Manager Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Manager Report</h1>
+
+    <form method="get">
+        {{ form.as_p }}
+        <button type="submit">Generate Report</button>
+    </form>
+
+    {% if show_report %}
+    <hr>
+    <h2>Report for Manager: {{ manager.manager.username }}</h2>
+    <h4>Period: {{ start_date }} to {{ end_date }}</h4>
+
+    <h3>Shops</h3>
+    <ul>
+        <li>Occupied Shops: {{ occupied_shops }}</li>
+        <li>Vacant Shops: {{ vacant_shops }}</li>
+    </ul>
+
+    <h3>Rent Payments</h3>
+    <ul>
+        <li>Rent Collected: ₹ {{ rent_collected }}</li>
+        <li>Rent Pending: ₹ {{ rent_pending }}</li>
+    </ul>
+
+    <h3>Complaints Status</h3>
+    <ul>
+        {% for complaint in complaint_status_counts %}
+            <li>{{ complaint.status|title }}: {{ complaint.count }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Visual Charts</h2>
+
+    <canvas id="shopChart" width="400" height="200"></canvas>
+    <canvas id="rentChart" width="400" height="200"></canvas>
+    <canvas id="complaintChart" width="400" height="200"></canvas>
+
+    <script>
+        // Shops Pie Chart
+        const shopCtx = document.getElementById('shopChart').getContext('2d');
+        new Chart(shopCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Occupied', 'Vacant'],
+                datasets: [{
+                    data: [{{ occupied_shops }}, {{ vacant_shops }}],
+                    backgroundColor: ['#4CAF50', '#FFC107']
+                }]
+            }
+        });
+
+        // Rent Bar Chart
+        const rentCtx = document.getElementById('rentChart').getContext('2d');
+        new Chart(rentCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Rent Collected', 'Rent Pending'],
+                datasets: [{
+                    label: 'Amount (₹)',
+                    data: [{{ rent_collected }}, {{ rent_pending }}],
+                    backgroundColor: ['#2196F3', '#f44336']
+                }]
+            }
+        });
+
+        // Complaints Pie Chart
+        const complaintCtx = document.getElementById('complaintChart').getContext('2d');
+        new Chart(complaintCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for complaint in complaint_status_counts %}'{{ complaint.status|title }}',{% endfor %}],
+                datasets: [{
+                    data: [{% for complaint in complaint_status_counts %}{{ complaint.count }},{% endfor %}],
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+                }]
+            }
+        });
+    </script>
+
+    <!-- Download Links -->
+    <a href="{% url 'download_pdf' %}?start_date={{ start_date }}&end_date={{ end_date }}&manager_id={{ manager.id }}" target="_blank">Download PDF</a> |
+    <a href="{% url 'download_excel' %}?start_date={{ start_date }}&end_date={{ end_date }}&manager_id={{ manager.id }}" target="_blank">Download Excel</a>
+
+    {% endif %}
+</body>
+</html>

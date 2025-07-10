@@ -1,0 +1,105 @@
+<!-- templates/report_pdf_template.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mall Management Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #1a73e8;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 30px;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #1a73e8;
+            color: white;
+        }
+        .summary {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Smart Commercial Hub - Manager Report</h1>
+
+    <div class="summary">
+        <h3>Report Summary:</h3>
+        <p><strong>Occupied Shops:</strong> {{ occupied_count }}</p>
+        <p><strong>Vacant Shops:</strong> {{ vacant_count }}</p>
+    </div>
+
+    <h3>Payment Status</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>No. of Payments</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payment_status %}
+            <tr>
+                <td>{{ payment.payment_status|title }}</td>
+                <td>{{ payment.count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Complaint Status</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>No. of Complaints</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for complaint in complaint_status %}
+            <tr>
+                <td>{{ complaint.status|title }}</td>
+                <td>{{ complaint.count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Complaint Categories</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>No. of Complaints</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for category in complaint_category %}
+            <tr>
+                <td>{{ category.category|title }}</td>
+                <td>{{ category.count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <footer style="margin-top: 50px; font-size: 12px;">
+        <p>Generated on: {{ now|date:"d M Y H:i" }}</p>
+    </footer>
+
+</body>
+</html>

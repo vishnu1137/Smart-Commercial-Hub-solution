@@ -1,0 +1,76 @@
+{% extends 'admin/base_site.html' %} 
+{% load static %}
+
+{% block content %}
+<h2>Mall Report - {{ selected_month }}</h2>
+
+<form method="get" class="mb-3">
+    <label>Month:</label>
+    <input type="month" name="month" required>
+    <button type="submit" class="btn btn-primary">Filter</button>
+</form>
+
+{% if shops %}
+<h3>Shop Details</h3>
+<table class="table table-bordered">
+    <tr>
+        <th>Shop No</th><th>Name</th><th>Size</th><th>Location</th><th>Type</th><th>Status</th><th>Tenant</th>
+    </tr>
+    {% for shop in shops %}
+        <tr>
+            <td>{{ shop.shop_no }}</td>
+            <td>{{ shop.name }}</td>
+            <td>{{ shop.size }}</td>
+            <td>{{ shop.location }}</td>
+            <td>{{ shop.get_shop_type_display }}</td>
+            <td>{{ shop.get_status_display }}</td>
+            <td>
+                {% for allocated in allocated_shops %}
+                    {% if allocated.shop_id.id == shop.id %}
+                        {{ allocated.tenant_id.tenant.username }}
+                    {% endif %}
+                {% endfor %}
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+
+<h3>Complaint Status</h3>
+<table class="table table-bordered">
+    <tr>
+        <th>Shop No</th><th>Tenant</th><th>Category</th><th>Status</th><th>Priority</th><th>Date</th>
+    </tr>
+    {% for complaint in complaints %}
+    <tr>
+        <td>{{ complaint.shop.shop_id.shop_no }}</td>
+        <td>{{ complaint.shop.tenant_id.tenant.username }}</td>
+        <td>{{ complaint.get_category_display }}</td>
+        <td>{{ complaint.get_status_display }}</td>
+        <td>{{ complaint.get_priority_display }}</td>
+        <td>{{ complaint.created_at|date:"Y-m-d" }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h3>Rent Payment Details</h3>
+<table class="table table-bordered">
+    <tr>
+        <th>Shop No</th><th>Tenant</th><th>Amount</th><th>Status</th><th>Payment Date</th>
+    </tr>
+    {% for payment in rent_payments %}
+    <tr>
+        <td>{{ payment.shop.shop_id.shop_no }}</td>
+        <td>{{ payment.tenant.tenant_id.tenant.username }}</td>
+        <td>{{ payment.amount }}</td>
+        <td>{{ payment.payment_status }}</td>
+        <td>{{ payment.created_at|date:"Y-m-d" }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+<a href="{% url 'export_pdf' %}?month={{ request.GET.month }}&year={{ request.GET.year }}" class="btn btn-danger">Download PDF</a>
+<a href="{% url 'export_excel' %}?month={{ request.GET.month }}&year={{ request.GET.year }}" class="btn btn-success">Download Excel</a>
+
+{% endif %}
+{% endblock %}
