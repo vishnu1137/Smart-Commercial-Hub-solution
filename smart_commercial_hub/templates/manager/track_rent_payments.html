@@ -1,0 +1,79 @@
+{% extends "manager/base.html" %}
+{% block content %}
+
+<div class="container mt-5">
+
+    <h2 class="text-center mb-4">Track Rent Payments</h2>
+
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-4">
+            <input type="text" name="tenant_name" class="form-control" placeholder="Search Tenant Name" value="{{ request.GET.tenant_name }}">
+        </div>
+
+        <div class="col-md-3">
+            <select name="payment_status" class="form-select">
+                <option value="">All Status</option>
+                <option value="Success" {% if request.GET.payment_status == 'Success' %}selected{% endif %}>Success</option>
+                <option value="Pending" {% if request.GET.payment_status == 'Pending' %}selected{% endif %}>Pending</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <input type="date" name="start_date" class="form-control" value="{{ request.GET.start_date }}">
+        </div>
+
+        <div class="col-md-2">
+            <input type="date" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
+        </div>
+
+        <div class="col-md-1">
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+    <table class="table table-striped shadow-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Tenant</th>
+                <th>Shop</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Method</th>
+                <th>Transaction ID</th>
+                <th>Payment Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payments %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ payment.tenant.tenant_id.tenant.username }}</td>
+                <td>{{ payment.shop.shop_id.name }}</td>
+                <td>₹ {{ payment.amount }}</td>
+                <td>
+                    {% if payment.payment_status == "Success" %}
+                        <span class="badge bg-success">{{ payment.payment_status }}</span>
+                    {% elif payment.payment_status == "Pending" %}
+                        <span class="badge bg-warning text-dark">{{ payment.payment_status }}</span>
+                    {% else %}
+                        <span class="badge bg-danger">{{ payment.payment_status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ payment.payment_method }}</td>
+                <td>{{ payment.transaction_id }}</td>
+                <td>{{ payment.created_at|date:"d M Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center">No Payments Found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+</div>
+
+{% endblock %}
