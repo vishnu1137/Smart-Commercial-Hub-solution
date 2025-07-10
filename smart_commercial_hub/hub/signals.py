@@ -10,7 +10,7 @@ def send_complaint_resolved_email(sender, instance, **kwargs):
         tenant_email = None
         tenant_name = "Tenant"
 
-        # ✅ Check if Complaint is linked to `AllocatedShop`
+        #Check if Complaint is linked to `AllocatedShop`
         if hasattr(instance, "allocated_shop") and instance.allocated_shop:
             tenant = instance.allocated_shop.tenant_id  # Correct way to access Tenant
             if tenant and hasattr(tenant, "user"):

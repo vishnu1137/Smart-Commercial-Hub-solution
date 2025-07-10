@@ -3,8 +3,6 @@ from django.contrib.auth import views as auth_views
 from hub.views import *
 
 urlpatterns = [
-    #path('payment/initiate/', initiate_payment, name='initiate_payment'),
-    #path('payment/callback/', payment_callback, name='payment_callback'),
     path('payment/initiate/', initiate_payment, name='initiate_payment'),
     path('payment/create/<int:allocated_shop_id>/', create_payment, name='create_payment'),
     path('payment/callback/<int:transaction_id>/', payment_callback, name='payment_callback'),
@@ -21,9 +19,7 @@ urlpatterns = [
     path("login/", user_login, name="user_login"),
     path("logout/", user_logout, name="user_logout"),
     path('details/<int:shop_id>/', shop_details, name="shop_details"),
-    #path("update/", update_tenant, name="update_tenant"),
     path("dashboard/", tenant_dashboard, name="tenant_dashboard"),
-    #path('profile/', tenant_profile, name='tenant_profile'),
 
     path('profile/', profile_view, name='profile'),
     path('profile/edit/', edit_profile, name='edit_profile'),
@@ -39,8 +35,6 @@ urlpatterns = [
     path('allocate-shop/<int:shop_id>/', allocate_shop, name='allocate_shop'),
     path('shop-details/<int:shop_id>/', shop_details, name='shop_details'),
     path('tenant-details/<int:tenant_id>/', tenant_details, name="tenant_details"),
-    #path('manager/profile/', manager_profile, name='manager_profile'),
-    #path('manager/profile/edit/', edit_manager_profile, name='edit_manager_profile'),
     path('occupied-shops/', occupied_shops, name='occupied_shops'),
     path('vacant-shops/', vacant_shops, name='vacant_shops'),
     path("manage-tenants/", manage_tenants, name="manage_tenants"),
@@ -54,7 +48,9 @@ urlpatterns = [
     path('my-rents/', rent_list, name='rent-list'),
 
     path('shop_rent/', shop_rent, name='shop_rent'),
+    path('generate-report/', generate_combined_report, name='generate_combined_report'),
+    path('download-pdf/', download_pdf, name='download_pdf'),
+    path('download-excel/', download_excel, name='download_excel'),
+    path('track-payment/', manager_rent_payments, name='manager-rent-payments'),
 
-    
-    
 ]

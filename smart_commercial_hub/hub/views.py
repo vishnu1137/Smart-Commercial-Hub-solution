@@ -1,7 +1,7 @@
 from datetime import datetime
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth import authenticate, login, logout
-from django.core.mail import send_mail
+from django.core.mail import send_mail,EmailMessage
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist  
@@ -9,27 +9,212 @@ from django.contrib.auth.decorators import login_required,user_passes_test
 from django.urls import reverse
 from hub.models import *
 from hub.forms import *
-
 from django.db.models import Sum, Count, Avg, F, Q
 from django.utils import timezone
 from datetime import timedelta
 import calendar
 from django.contrib.admin.views.decorators import staff_member_required
-
-
 import json
 import razorpay
 import uuid
-from django.http import JsonResponse
+from django.http import JsonResponse,HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render, redirect, get_object_or_404
-from .models import AllocatedShop, RentPaymentTransaction
-
 from num2words import num2words
 from io import BytesIO
-from django.http import HttpResponse
-from django.template.loader import get_template
+from django.template.loader import get_template, render_to_string
 from xhtml2pdf import pisa
+import datetime
+import io
+import pandas as pd
+import matplotlib.pyplot as plt
+from django.utils.timezone import now
+from weasyprint import HTML
+
+
+def is_manager(user):
+    return hasattr(user,'manager')
+
+@login_required
+@user_passes_test(is_manager)
+def manager_rent_payments(request):
+    # Get all rent payments
+    payments = RentPaymentTransaction.objects.all().order_by('-created_at')
+
+    # Filters
+    tenant_name = request.GET.get('tenant_name')
+    payment_status = request.GET.get('payment_status')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    if tenant_name:
+        payments = payments.filter(
+            Q(tenant__tenant_id__tenant__username__icontains=tenant_name) |
+            Q(tenant__tenant_id__tenant__first_name__icontains=tenant_name) |
+            Q(tenant__tenant_id__tenant__last_name__icontains=tenant_name)
+        )
+
+    if payment_status:
+        payments = payments.filter(payment_status__icontains=payment_status)
+
+    if start_date and end_date:
+        payments = payments.filter(created_at__date__range=[start_date, end_date])
+
+    context = {
+        'payments': payments
+    }
+
+    return render(request, 'manager/track_rent_payments.html', context)
+
+def download_excel(request):
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    if not start_date or not end_date:
+        return HttpResponse("Missing start_date or end_date", status=400)
+
+    shops = Shop.objects.filter(created_at__range=[start_date, end_date])
+    complaints = Complaint.objects.filter(created_at__range=[start_date, end_date])
+    payments = RentPaymentTransaction.objects.filter(created_at__range=[start_date, end_date])
+
+    occupied_count = shops.filter(status='occupied').count()
+    vacant_count = shops.filter(status='vacant').count()
+
+    complaint_status = complaints.values('status').annotate(count=models.Count('id'))
+    complaint_category = complaints.values('category').annotate(count=models.Count('id'))
+    payment_status = payments.values('payment_status').annotate(count=models.Count('id'))
+
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Shops Sheet
+        df_shops = pd.DataFrame({
+            'Shop Status': ['Occupied', 'Vacant'],
+            'Count': [occupied_count, vacant_count]
+        })
+        df_shops.to_excel(writer, sheet_name='Shops', index=False)
+
+        # Payments Sheet
+        df_payments = pd.DataFrame(list(payment_status))
+        if not df_payments.empty:
+            df_payments.columns = ['Payment Status', 'Count']
+        df_payments.to_excel(writer, sheet_name='Payments', index=False)
+
+        # Complaint Status Sheet
+        df_complaints = pd.DataFrame(list(complaint_status))
+        if not df_complaints.empty:
+            df_complaints.columns = ['Complaint Status', 'Count']
+        df_complaints.to_excel(writer, sheet_name='Complaints Status', index=False)
+
+        # Complaint Categories Sheet
+        df_categories = pd.DataFrame(list(complaint_category))
+        if not df_categories.empty:
+            df_categories.columns = ['Complaint Category', 'Count']
+        df_categories.to_excel(writer, sheet_name='Complaint Categories', index=False)
+
+    output.seek(0)
+    response = HttpResponse(
+        output,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    filename = f"mall_report_{now().strftime('%d%m%Y')}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+def download_pdf(request):
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    if not start_date or not end_date:
+        return HttpResponse("Missing start_date or end_date", status=400)
+
+    # Fetching Data
+    shops = Shop.objects.filter(created_at__range=[start_date, end_date])
+    complaints = Complaint.objects.filter(created_at__range=[start_date, end_date])
+    payments = RentPaymentTransaction.objects.filter(created_at__range=[start_date, end_date])
+
+    occupied_count = shops.filter(status='occupied').count()
+    vacant_count = shops.filter(status='vacant').count()
+
+    complaint_status = complaints.values('status').annotate(count=models.Count('id'))
+    complaint_category = complaints.values('category').annotate(count=models.Count('id'))
+    payment_status = payments.values('payment_status').annotate(count=models.Count('id'))
+
+    # Render HTML to PDF
+    html_string = render_to_string('report_pdf_template.html', {
+        'occupied_count': occupied_count,
+        'vacant_count': vacant_count,
+        'complaint_status': complaint_status,
+        'complaint_category': complaint_category,
+        'payment_status': payment_status,
+        'now': now(),
+        'start_date': start_date,
+        'end_date': end_date
+    })
+
+    html = HTML(string=html_string)
+    pdf_file = html.write_pdf()
+    print("entry start")
+    email = EmailMessage(
+        subject=f"Mall Management Report ({start_date} to {end_date})",
+        body="Dear Owner,\n\nPlease find attached the latest mall manager report.\n\nBest regards,\nSmart Commercial Hub System",
+        from_email=settings.MANAGER_EMAIL,
+        to=[settings.EMAIL_HOST_USER],
+    )
+    print("sucess")
+
+    email.attach(f"Mall_Report_{now().strftime('%d%m%Y')}.pdf", pdf_file, 'application/pdf')
+    email.send(fail_silently=False)
+
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="mall_report_{now().strftime("%d%m%Y")}.pdf"'
+    return response
+
+# views.py
+
+def generate_combined_report(request):
+    managers = Manager.objects.all()
+    context = {
+        'managers': managers,
+        'show_report': False,  # By default hide report
+    }
+
+    if request.GET.get('start_date') and request.GET.get('end_date') and request.GET.get('manager'):
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        manager_id = request.GET.get('manager')
+
+        # Fetch shops, complaints, payments
+        shops = Shop.objects.filter(created_at__range=[start_date, end_date])
+        complaints = Complaint.objects.filter(created_at__range=[start_date, end_date])
+        payments = RentPaymentTransaction.objects.filter(created_at__range=[start_date, end_date])
+
+        # Shop Status
+        occupied_count = shops.filter(status='occupied').count()
+        vacant_count = shops.filter(status='vacant').count()
+
+        # Complaint Status
+        complaint_status = complaints.values('status').annotate(count=Count('id'))
+
+        # Complaint Categories
+        complaint_category = complaints.values('category').annotate(count=Count('id'))
+
+        # Payment Status
+        payment_status = payments.values('payment_status').annotate(count=Count('id'))
+
+        context.update({
+            'occupied_count': occupied_count,
+            'vacant_count': vacant_count,
+            'complaint_status': complaint_status,
+            'complaint_category': complaint_category,
+            'payment_status': payment_status,
+            'start_date': start_date,
+            'end_date': end_date,
+            'selected_manager_id': manager_id,
+            'show_report': True,
+        })
+
+    return render(request, 'report_combined.html', context)
 
 def render_to_pdf(template_src, context_dict={}):
     template = get_template(template_src)
@@ -462,9 +647,6 @@ def view_complaints(request):
 
 #MANAGER
 
-def is_manager(user):
-    return hasattr(user,'manager')
-
 @login_required
 @user_passes_test(is_manager)
 
@@ -489,8 +671,9 @@ def manager_dashboard(request):
     return render(request, "manager/manager_dashboard.html", context)
 
 def occupied_shops(request):
-    shops = Shop.objects.filter(status='occupied')
-    return render(request, "manager/occupied_shop.html", {"shops": shops})
+    allocated_shops = AllocatedShop.objects.select_related('shop_id', 'tenant_id__tenant')\
+                                           .filter(shop_id__status='occupied')
+    return render(request, "manager/occupied_shop.html", {"allocated_shops": allocated_shops})
 
 def vacant_shops(request):
     shops = Shop.objects.filter(status='vacant')

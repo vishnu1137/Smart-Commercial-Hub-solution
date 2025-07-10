@@ -3,8 +3,7 @@ from django.urls import path
 from django.shortcuts import render
 from hub.models import *
 from django.utils.html import format_html
-from hub.views import shop_occupancy_report, rental_income_report, lease_expiry_report, complaint_analysis_report, tenant_report, comprehensive_mall_report
-
+from hub.views import *
 class ShopAdmin(admin.ModelAdmin):
     list_display = ('name', 'shop_no', 'shop_type', 'location', 'status', 'created_at')
     list_filter = ('status', 'shop_type', 'location')
@@ -31,7 +30,7 @@ class AllocatedShopAdmin(admin.ModelAdmin):
         tenant = obj.tenant_id
         # Ensure the shop exists before updating
         if shop:
-            shop.status = "occupied"  # ✅ Change status to occupied
+            shop.status = "occupied"  
             shop.save()
             
             # Send email only for new allocations
