@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path,include
 from django.conf import settings
 from hub import views
+from hub.admin import mall_admin_site
 from django.conf.urls.static import static
 
 
